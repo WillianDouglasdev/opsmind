@@ -5,7 +5,7 @@ import { formatRelativeTime } from "../../utils/formatters.js";
 
 const groups = [
   { label: "Hoje", items: [{ label: "Visão geral", path: "/", Icon: LayoutDashboard, end: true }, { label: "Operação", path: "/operation", Icon: ArrowLeftRight }] },
-  { label: "Decisões", items: [{ label: "Alertas", path: "/alerts", Icon: BellRing }, { label: "Investigações", Icon: Search }, { label: "Ações", path: "/actions", Icon: ListChecks }] },
+  { label: "Decisões", items: [{ label: "Alertas", path: "/alerts", Icon: BellRing }, { label: "Investigações", path: "/investigations", Icon: Search }, { label: "Ações", path: "/actions", Icon: ListChecks }] },
   { label: "Dados", items: [{ label: "Pipelines", path: "/pipelines", Icon: GitBranch }, { label: "Qualidade", Icon: ShieldCheck }, { label: "Fontes", Icon: Database }] },
   { label: "IA", items: [{ label: "Assistente", path: "/assistant", Icon: MessagesSquare }] },
 ];
@@ -30,8 +30,7 @@ export default function Sidebar({ isOpen, isMobile, onNavigate, sidebarRef, clos
       <p className="sidebar-product-label">Inteligência operacional</p>
       <nav className="sidebar-nav" aria-label="Navegação principal">
         {groups.map((group) => <div className="nav-group" key={group.label}><p className="sidebar-section-label">{group.label}</p>{group.items.map(({ label, path, Icon, end }) => (
-          // Itens futuros não fingem ser links. Investigações atuais continuam
-          // acessíveis pelos alertas; este item reserva a futura lista persistida.
+          // Itens futuros não fingem ser links; áreas funcionais recebem rotas reais.
           path ? <NavLink key={label} to={path} end={end} onClick={onNavigate} className={({ isActive }) => "sidebar-link" + (isActive ? " active" : "")}><Icon size={16} aria-hidden="true" /><span>{label}</span></NavLink>
             : <span key={label} className="sidebar-link future" aria-disabled="true"><Icon size={16} aria-hidden="true" /><span>{label}</span><small>Em breve</small></span>
         ))}</div>)}

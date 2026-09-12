@@ -13,6 +13,8 @@ DRF não tem autenticação configurada. Todos os dez models estão registrados 
 | `operations/analytics/dashboard.py` | Composição dos indicadores e score |
 | `operations/operation/service.py` | Períodos, agregações, comparações, tendência e paginação da Operação |
 | `operations/operation_views.py` | Endpoints somente leitura e tradução de erros da Operação |
+| `operations/investigations/service.py` | Composição derivada de evidências, timeline e próximos passos |
+| `operations/investigation_views.py` | Endpoints somente leitura e validação da investigação |
 | `operations/alerts/rules.py` | Critérios e severidades; recebe métricas prontas |
 | `operations/alerts/engine.py` | Aplica regras e ordena alertas ativos |
 | `operations/alerts/investigations.py` | Impacto e evidências por tipo de alerta |
@@ -73,6 +75,8 @@ Todas as rotas abaixo têm prefixo `/api/` e barra final.
 | `GET operation/delays/` | Taxa geral, clientes afetados e contribuição por filial; query `days` |
 | `GET operation/branches/{id}/` | Métricas, comparação com a média e tendência diária; query `days` |
 | `GET operation/orders/` | Pedidos paginados; `days`, `branch`, `status`, `delivery`, `page` e `page_size` |
+| `GET investigations/` | Investigações derivadas disponíveis; query `days` |
+| `GET investigations/delivery-delays/` | Resumo, evidências, timeline e próximos passos; query `days` e `branch` |
 
 IA sem configuração válida responde 503. Falha de provider pode produzir resposta
 200 identificada como `fallback`. Campos extras são rejeitados nos contratos de
@@ -123,6 +127,26 @@ métrica `order_delay_rate`, a entidade `orders`, o campo `status`, a regra
 `status = delayed` e a pipeline `orders`. Estoque e chamados ativos são snapshots;
 tickets de filial são apenas os vinculados a pedidos daquela unidade. Ausência de
 pedidos ou atrasos produz resposta válida, não erro.
+
+## Investigações derivadas
+
+`investigations/service.py` não persiste casos e não importa IA. Ele usa
+`build_delay_overview` e `build_branch_detail` para período, comparação e tendência,
+e chama consultas analíticas parametrizadas para chamados, estoque crítico, clientes
+estratégicos e impacto financeiro. Os defaults dessas consultas continuam em 30 dias;
+a investigação pode preservar os recortes de 7, 30 ou 90 dias da Operação.
+
+O detalhe sem `branch` seleciona deterministicamente a filial com maior taxa entre as
+que possuem atrasos. Filial inexistente retorna 404; parâmetros desconhecidos ou fora
+do domínio retornam 400. Sem atrasos, a resposta é 200 com `data_status=empty`.
+`partial` indica que o sinal principal existe, mas não foram encontrados chamados,
+estoque crítico relacionado ou clientes estratégicos recorrentes.
+
+Severidade reutiliza `branch_performance_rule`; quando o limiar de alerta não é
+atingido, a investigação permanece informativa com severidade `low`. Evidências de
+estoque usam ocorrência simultânea entre item crítico e pedido atrasado na mesma
+filial/período. Isso não demonstra causalidade. Próximos passos são estruturas
+calculadas e não criam `ActionItem`.
 
 ## IA e manutenção
 
@@ -207,4 +231,7 @@ comando, fonte versionada e API.
 `test_operation` cobre filiais, detalhe, métricas, média, atraso, filtros combinados,
 paginação, períodos, vazio, 404 e parâmetros inválidos. O teste de fronteiras também
 compara a agregação de filial com o ORM geral nas viradas de dia.
+`test_investigations` cobre lista, detalhe geral e por filial, comparação operacional,
+chamados, estoque, clientes estratégicos, timeline, próximos passos, ausência de dados,
+parâmetros inválidos e linguagem não causal.
 Consulte lacunas e resultados em [AUDIT_PHASE01.md](AUDIT_PHASE01.md).

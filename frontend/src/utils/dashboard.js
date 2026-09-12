@@ -7,7 +7,7 @@ export function buildIndicators(summary) {
   return [
     { id: "revenue", label: "Faturamento", value: formatCurrency(summary.revenue.value), context: change(summary.revenue.change_percentage) },
     { id: "orders", label: "Pedidos", value: formatNumber(summary.orders.value), context: change(summary.orders.change_percentage) },
-    { id: "delays", label: "Pedidos atrasados", value: formatNumber(summary.delayed_orders.value), context: `${formatPercentage(summary.delayed_orders.rate, false)} dos pedidos · ${change(summary.delayed_orders.change_percentage)}`, path: "/operation/delays?days=30" },
+    { id: "delays", label: "Pedidos atrasados", value: formatNumber(summary.delayed_orders.value), context: `${formatPercentage(summary.delayed_orders.rate, false)} dos pedidos · ${change(summary.delayed_orders.change_percentage)}`, path: "/operation/delays?days=30", investigationPath: "/investigations/delivery-delays?days=30" },
     { id: "tickets", label: "Chamados ativos", value: formatNumber(summary.open_tickets.value), context: "Abertos ou em andamento · toda a base" },
   ];
 }

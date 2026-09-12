@@ -72,6 +72,14 @@ export function getOperationOrders(params, options) {
   return request(`/api/operation/orders/?${operationQuery(params)}`, options);
 }
 
+export function getInvestigations(days = 30, options) {
+  return request(`/api/investigations/?${operationQuery({ days })}`, options);
+}
+
+export function getDeliveryDelayInvestigation(params, options) {
+  return request(`/api/investigations/delivery-delays/?${operationQuery(params)}`, options);
+}
+
 export function getPipelines(options) {
   return request("/api/data/pipelines/", options);
 }

@@ -14,6 +14,8 @@ acrescenta tokens semânticos, tema escuro e gráficos responsivos ao tema.
 | `/operation` | `OperationPage` | Resumo, comparação de filiais, atenção e pedidos paginados com filtros em URL |
 | `/operation/delays` | `OperationDelaysPage` | Taxa geral e contribuição das filiais, com links já filtrados por atraso |
 | `/operation/branches/:branchId` | `OperationBranchPage` | Saúde, tendência, comparação, sinais e pedidos da filial |
+| `/investigations` | `InvestigationsPage` | Lista derivada das situações disponíveis no recorte |
+| `/investigations/delivery-delays` | `DeliveryDelayInvestigationPage` | Resumo, evidências, timeline e próximos passos; query `days` e `branch` |
 | `/alerts` | `AlertsPage` | Lista e filtro local por severidade; loading, erro e vazio |
 | `/alerts/:alertKey` | `AlertInvestigationPage` | Investigação e recomendações em cargas independentes; 404 específico; criação de ação |
 | `/actions` | `ActionsPage` | Lista, contagens e filtros locais; PATCH de status e reordenação após resposta |
@@ -24,9 +26,10 @@ acrescenta tokens semânticos, tema escuro e gráficos responsivos ao tema.
 própria página; os demais estão no layout. O indicador “API disponível” consulta
 `/api/health/` ao montar: não significa banco, Gemini ou dados atualizados.
 
-A sidebar agrupa Hoje, Decisões, Dados e IA. Operação e Pipelines são rotas funcionais.
-Investigações (futura lista), Qualidade e Fontes permanecem “Em breve”. As
-investigações atuais continuam acessíveis pelos alertas e pela filial da Home.
+A sidebar agrupa Hoje, Decisões, Dados e IA. Operação, Investigações e Pipelines são
+rotas funcionais. Qualidade e Fontes permanecem “Em breve”. As investigações menores
+dos alertas continuam preservadas; o workspace da Fase 05 é acessível também por Home,
+Alertas, Atrasos e detalhe da filial.
 Não registrar uma rota sem uma entrega real ou placeholder explicitamente acordado.
 
 ## Composição da Home
@@ -105,6 +108,7 @@ loading, erro, sucesso, cancelamento e retry das leituras da área.
 | `actions.css` | Resumo, filtros e itens do plano |
 | `pipelines.css` | Execução atual, etapas, contagens, histórico e rejeições |
 | `operation.css` | Resumo, comparação, tendência, filtros, tabelas e drill-down de Operação |
+| `investigations.css` | Catálogo, resumo, evidências, timeline e próximos passos |
 | `charts.css` | Donut de qualidade, centro, legenda textual e variações responsivas |
 | `shared.css` | Animação, classes `feature-*`, badges compartilhados e backdrop padrão |
 | `responsive.css` | Sobrescritas por largura e movimento reduzido |
@@ -173,6 +177,22 @@ tema da interface. `DataQualityDonut` usa somente a relação válida de parte-d
 Pipeline V1: válidos × rejeitados. Valor e percentual permanecem em legenda textual e
 no tooltip, então o gráfico não depende apenas de verde e vermelho.
 
+## Área Investigações
+
+`InvestigationsPage` apresenta somente investigações que possuem base real no período.
+`DeliveryDelayInvestigationPage` preserva `days` e `branch`, usa `useApiResource` e
+distingue loading, erro, ausência de atrasos e evidências adicionais ausentes.
+
+O workspace evita uma grade de cards homogêneos: combina abertura editorial, faixa de
+impacto, linhas compactas de evidência, timeline e sequência numerada de próximos
+passos. Cada link retorna ao recorte filtrado da Operação. As evidências mostram fonte,
+valor atual, comparação, diferença e variação quando aplicável.
+
+Tema claro e escuro usam os mesmos tokens semânticos. Abaixo de 1200px o catálogo e o
+livro de evidências reduzem colunas; abaixo de 768px o impacto empilha; abaixo de 576px
+timeline e próximos passos passam a uma coluna legível sem rolagem horizontal. Não há
+chamada ao assistente ou ao Gemini nessa área.
+
 ## Validação
 
 Em `frontend/`:
@@ -183,9 +203,9 @@ npm run lint
 npm run build
 ```
 
-`npm test` usa `node:test`, sem dependências novas: 24 testes protegem dashboard,
-pipeline, filtros, render, estados, links, tabela, comparação, tema, persistência,
-paleta e donut. A Fase 03.5 repetiu a verificação em Chrome headless local contra API,
+`npm test` usa `node:test`, sem dependências novas: 30 testes protegem dashboard,
+pipeline, filtros, investigação, render, estados, links, tabela, comparação, tema,
+persistência, paleta e donut. A Fase 05 repetiu a verificação em navegador contra API,
 seed e pipeline reais nos temas claro e escuro;
 não há suíte E2E instalada no projeto.
 

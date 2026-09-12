@@ -58,10 +58,14 @@ de automatizar. Analytics permanece independente da ingestão.
 
 ## V2.3 — investigações com continuidade
 
-As investigações atuais já existem, mas são recalculadas. Evoluir para contexto
-preservado, histórico e vínculo estável com o sinal observado. Definir lifecycle de
-alerta antes de criar persistência; chaves baseadas no nome da filial precisam de
-transição compatível com ações existentes.
+**Workspace derivado entregue na Fase 05.** A lista e o detalhe de atrasos organizam
+resumo, evidências, timeline e próximos passos para a operação ou uma filial. Período
+e filial permanecem na URL; os fatos são recalculados a partir da base atual, sem model,
+migration, Gemini ou criação de ActionItems. Ver [relatório](PHASE05_REPORT.md).
+
+Persistência, histórico e vínculo imutável com o sinal continuam futuros. Antes de
+criar casos persistidos, definir lifecycle de alerta e política de snapshot; chaves
+baseadas no nome da filial também precisam de transição compatível com ações existentes.
 
 ## V2.4 — IA contextual
 
@@ -86,6 +90,6 @@ mesmo PR. Não misturar redesenho, ingestão e mudança de indicadores numa úni
 
 Próximo prompt sugerido:
 
-> Leia docs/, incluindo PHASE04_REPORT.md. Evolua Investigações para preservar contexto,
-> histórico e vínculo estável com o sinal aberto a partir de Operação. Defina primeiro
-> o lifecycle de alerta e mantenha cálculo, evidência e causalidade separados da IA.
+> Leia docs/, incluindo PHASE05_REPORT.md. Integre IA contextual somente sobre o contrato
+> estruturado da investigação selecionada, mantendo cálculos e evidências no backend,
+> fallback identificado e separação explícita entre hipótese, correlação e causalidade.

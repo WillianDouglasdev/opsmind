@@ -12,6 +12,8 @@ const pageDetails = {
   "/pipelines": { title: "Pipelines", subtitle: "Acompanhe como os pedidos chegam à base operacional." },
   "/operation": { title: "Operação", subtitle: "Encontre onde estão os desvios e abra os dados por trás deles." },
   "/operation/delays": { title: "Atrasos", subtitle: "Veja onde os pedidos atrasados se concentram." },
+  "/investigations": { title: "Investigações", subtitle: "Organize os fatos relacionados aos sinais operacionais." },
+  "/investigations/delivery-delays": { title: "Investigação", subtitle: "Examine evidências relacionadas aos atrasos sem atribuir causalidade." },
 };
 
 export default function AppLayout() {

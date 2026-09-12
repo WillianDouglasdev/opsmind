@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 class AIMissingContextError(AIError):
     error_type = "missing_context"
 
+
 UNKNOWN_ANSWER = (
     "Atualmente consigo analisar entregas, filiais, estoque, clientes estratégicos, "
     "chamados e o resumo da operação."
@@ -305,7 +306,6 @@ def _log_failure(provider: str, stage: str, error: Exception) -> None:
         provider,
         stage,
         error_type,
-        exc_info=True,
     )
 
 

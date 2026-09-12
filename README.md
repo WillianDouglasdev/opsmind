@@ -4,7 +4,8 @@
 
 > **Estágio atual: demo funcional — OpsMind2 com Operação e drill-down**
 
-OpsMind2 é uma prova de conceito de uma plataforma de inteligência operacional. Oestágio atual combina analytics, exploração por filiais e pedidos, pipeline real,
+OpsMind2 é uma prova de conceito de uma plataforma de inteligência operacional. O
+estágio atual combina analytics, exploração por filiais e pedidos, pipeline real,
 investigações determinísticas e IA explicativa com recomendações controladas e um
 plano de ação persistido, sem transferir cálculos ou decisões operacionais para o
 modelo generativo.

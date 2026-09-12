@@ -24,13 +24,16 @@ VALID_REVENUE_STATUSES = [
 ]
 
 
-def comparison_periods(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
-    # São dois blocos de 30 dias; o fim exclusivo do anterior evita contar a fronteira duas vezes.
+def comparison_periods(
+    reference_date: date = DEMO_REFERENCE_DATE,
+    days: int = 30,
+) -> dict:
+    # São dois blocos equivalentes; o fim exclusivo do anterior evita contar a fronteira duas vezes.
     current_start = timezone.make_aware(
-        datetime.combine(reference_date - timedelta(days=29), time.min)
+        datetime.combine(reference_date - timedelta(days=days - 1), time.min)
     )
     current_end = timezone.make_aware(datetime.combine(reference_date, time.max))
-    previous_start = current_start - timedelta(days=30)
+    previous_start = current_start - timedelta(days=days)
 
     return {
         "current": (current_start, current_end),
@@ -86,8 +89,13 @@ def order_metrics(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
     }
 
 
-def delay_metrics(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
-    periods = comparison_periods(reference_date)
+def delay_metrics(
+    reference_date: date = DEMO_REFERENCE_DATE,
+    *,
+    days: int = 30,
+    branch_id: int | None = None,
+) -> dict:
+    periods = comparison_periods(reference_date, days)
 
     # A comparação usa a taxa, não só a contagem, para considerar o volume de cada período.
     current_orders = Order.objects.filter(
@@ -98,6 +106,9 @@ def delay_metrics(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
         created_at__gte=periods["previous"][0],
         created_at__lt=periods["previous"][1],
     )
+    if branch_id is not None:
+        current_orders = current_orders.filter(branch_id=branch_id)
+        previous_orders = previous_orders.filter(branch_id=branch_id)
     current_total = current_orders.count()
     previous_total = previous_orders.count()
     # O seed marca como delayed tanto entregas tardias quanto atrasos ainda abertos.
@@ -135,9 +146,16 @@ def active_ticket_metrics() -> dict:
     }
 
 
-def delivery_ticket_metrics(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
-    periods = comparison_periods(reference_date)
+def delivery_ticket_metrics(
+    reference_date: date = DEMO_REFERENCE_DATE,
+    *,
+    days: int = 30,
+    branch_id: int | None = None,
+) -> dict:
+    periods = comparison_periods(reference_date, days)
     delivery_tickets = Ticket.objects.filter(category=Ticket.Category.DELIVERY)
+    if branch_id is not None:
+        delivery_tickets = delivery_tickets.filter(order__branch_id=branch_id)
     current = delivery_tickets.filter(
         created_at__gte=periods["current"][0],
         created_at__lte=periods["current"][1],
@@ -176,13 +194,16 @@ def ticket_analysis_metrics(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
     }
 
 
-def critical_inventory_items() -> list[dict]:
+def critical_inventory_items(branch_id: int | None = None) -> list[dict]:
     deficit = ExpressionWrapper(
         F("minimum_quantity") - F("current_quantity"),
         output_field=IntegerField(),
     )
+    queryset = Inventory.objects.filter(current_quantity__lt=F("minimum_quantity"))
+    if branch_id is not None:
+        queryset = queryset.filter(branch_id=branch_id)
     return list(
-        Inventory.objects.filter(current_quantity__lt=F("minimum_quantity"))
+        queryset
         .select_related("branch", "product")
         .annotate(deficit=deficit)
         .values(
@@ -199,27 +220,37 @@ def critical_inventory_items() -> list[dict]:
     )
 
 
-def recurring_strategic_customers(reference_date: date = DEMO_REFERENCE_DATE) -> list[dict]:
-    current_start, current_end = comparison_periods(reference_date)["current"]
+def recurring_strategic_customers(
+    reference_date: date = DEMO_REFERENCE_DATE,
+    *,
+    days: int = 30,
+    branch_id: int | None = None,
+) -> list[dict]:
+    current_start, current_end = comparison_periods(reference_date, days)["current"]
+    delay_filter = Q(
+        orders__created_at__gte=current_start,
+        orders__created_at__lte=current_end,
+        orders__status=Order.Status.DELAYED,
+    )
+    ticket_filter = Q(
+        tickets__created_at__gte=current_start,
+        tickets__created_at__lte=current_end,
+    )
+    if branch_id is not None:
+        delay_filter &= Q(orders__branch_id=branch_id)
+        ticket_filter &= Q(tickets__order__branch_id=branch_id)
     # Duas ocorrências já indicam recorrência sem transformar um caso isolado em risco.
     return list(
         Customer.objects.filter(segment=Customer.Segment.STRATEGIC)
         .annotate(
             recent_delays=Count(
                 "orders",
-                filter=Q(
-                    orders__created_at__gte=current_start,
-                    orders__created_at__lte=current_end,
-                    orders__status=Order.Status.DELAYED,
-                ),
+                filter=delay_filter,
                 distinct=True,
             ),
             recent_tickets=Count(
                 "tickets",
-                filter=Q(
-                    tickets__created_at__gte=current_start,
-                    tickets__created_at__lte=current_end,
-                ),
+                filter=ticket_filter,
                 distinct=True,
             ),
         )
@@ -229,14 +260,22 @@ def recurring_strategic_customers(reference_date: date = DEMO_REFERENCE_DATE) ->
     )
 
 
-def recent_delayed_order_impact(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
-    current_start, current_end = comparison_periods(reference_date)["current"]
+def recent_delayed_order_impact(
+    reference_date: date = DEMO_REFERENCE_DATE,
+    *,
+    days: int = 30,
+    branch_id: int | None = None,
+) -> dict:
+    current_start, current_end = comparison_periods(reference_date, days)["current"]
     money_field = DecimalField(max_digits=16, decimal_places=2)
-    result = Order.objects.filter(
+    orders = Order.objects.filter(
         created_at__gte=current_start,
         created_at__lte=current_end,
         status=Order.Status.DELAYED,
-    ).aggregate(
+    )
+    if branch_id is not None:
+        orders = orders.filter(branch_id=branch_id)
+    result = orders.aggregate(
         delayed_orders=Count("id"),
         impacted_customers=Count("customer_id", distinct=True),
         affected_revenue=Coalesce(
@@ -273,12 +312,17 @@ def delayed_product_metrics(
     )
 
 
-def critical_inventory_signals(reference_date: date = DEMO_REFERENCE_DATE) -> list[dict]:
-    critical_items = critical_inventory_items()
+def critical_inventory_signals(
+    reference_date: date = DEMO_REFERENCE_DATE,
+    *,
+    days: int = 30,
+    branch_id: int | None = None,
+) -> list[dict]:
+    critical_items = critical_inventory_items(branch_id)
     if not critical_items:
         return []
 
-    current_start, current_end = comparison_periods(reference_date)["current"]
+    current_start, current_end = comparison_periods(reference_date, days)["current"]
     product_ids = {item["product_id"] for item in critical_items}
     branch_ids = {item["branch_id"] for item in critical_items}
     # A consulta mede ocorrência conjunta; ela não afirma que o estoque causou o atraso.
@@ -315,12 +359,15 @@ def critical_inventory_signals(reference_date: date = DEMO_REFERENCE_DATE) -> li
 
 def critical_inventory_related_order_count(
     reference_date: date = DEMO_REFERENCE_DATE,
+    *,
+    days: int = 30,
+    branch_id: int | None = None,
 ) -> int:
-    critical_items = critical_inventory_items()
+    critical_items = critical_inventory_items(branch_id)
     if not critical_items:
         return 0
 
-    current_start, current_end = comparison_periods(reference_date)["current"]
+    current_start, current_end = comparison_periods(reference_date, days)["current"]
     item_pairs = Q()
     for item in critical_items:
         item_pairs |= Q(branch_id=item["branch_id"], items__product_id=item["product_id"])
@@ -351,17 +398,29 @@ def branch_delivery_ticket_count(
     ).count()
 
 
-def strategic_customer_impact(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
-    customers = recurring_strategic_customers(reference_date)
+def strategic_customer_impact(
+    reference_date: date = DEMO_REFERENCE_DATE,
+    *,
+    days: int = 30,
+    branch_id: int | None = None,
+) -> dict:
+    customers = recurring_strategic_customers(
+        reference_date,
+        days=days,
+        branch_id=branch_id,
+    )
     customer_ids = [customer["id"] for customer in customers]
-    current_start, current_end = comparison_periods(reference_date)["current"]
+    current_start, current_end = comparison_periods(reference_date, days)["current"]
     money_field = DecimalField(max_digits=16, decimal_places=2)
-    revenue = Order.objects.filter(
+    orders = Order.objects.filter(
         customer_id__in=customer_ids,
         status__in=VALID_REVENUE_STATUSES,
         created_at__gte=current_start,
         created_at__lte=current_end,
-    ).aggregate(
+    )
+    if branch_id is not None:
+        orders = orders.filter(branch_id=branch_id)
+    revenue = orders.aggregate(
         value=Coalesce(
             Sum("total_amount"),
             Decimal("0.00"),

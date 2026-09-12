@@ -319,6 +319,100 @@ class OperationOrderPageSerializer(serializers.Serializer):
     results = OperationOrderSerializer(many=True)
 
 
+class InvestigationDetailQuerySerializer(OperationPeriodQuerySerializer):
+    branch = serializers.IntegerField(required=False, min_value=1, allow_null=True)
+
+
+class InvestigationListItemSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    type = serializers.ChoiceField(choices=["delivery_delays"])
+    title = serializers.CharField()
+    description = serializers.CharField()
+    severity = serializers.ChoiceField(choices=["low", "medium", "high", "critical"])
+    branch = BranchIdentitySerializer()
+    delay_rate = serializers.FloatField(min_value=0, max_value=100)
+    delayed_orders = serializers.IntegerField(min_value=0)
+    detail_url = serializers.CharField()
+
+
+class InvestigationListSerializer(serializers.Serializer):
+    period = OperationPeriodSerializer()
+    items = InvestigationListItemSerializer(many=True)
+
+
+class InvestigationValueSerializer(serializers.Serializer):
+    label = serializers.CharField()
+    value = serializers.JSONField(allow_null=True)
+    unit = serializers.ChoiceField(
+        choices=["count", "currency", "percentage", "percentage_change", "percentage_points"]
+    )
+
+
+class OperationalEvidenceSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    type = serializers.ChoiceField(choices=["delivery", "tickets", "inventory", "customers"])
+    title = serializers.CharField()
+    description = serializers.CharField()
+    current = InvestigationValueSerializer()
+    comparison = InvestigationValueSerializer(allow_null=True)
+    difference = InvestigationValueSerializer(allow_null=True)
+    change = InvestigationValueSerializer(allow_null=True)
+    importance = serializers.ChoiceField(choices=["primary", "related"])
+    source = serializers.CharField()
+    detail_url = serializers.CharField(allow_null=True)
+
+
+class InvestigationSummarySerializer(serializers.Serializer):
+    title = serializers.CharField()
+    situation = serializers.CharField()
+    severity = serializers.ChoiceField(choices=["low", "medium", "high", "critical"])
+    branch = BranchIdentitySerializer()
+    branch_delay_rate = serializers.FloatField(min_value=0, max_value=100)
+    operation_delay_rate = serializers.FloatField(min_value=0, max_value=100)
+    difference_percentage_points = serializers.FloatField()
+    previous_delay_rate = serializers.FloatField(min_value=0, max_value=100)
+    change_percentage = serializers.FloatField(allow_null=True)
+    delayed_orders = serializers.IntegerField(min_value=0)
+    impacted_customers = serializers.IntegerField(min_value=0)
+    affected_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+
+
+class InvestigationTimelineItemSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    type = serializers.ChoiceField(choices=["delayed_orders"])
+    title = serializers.CharField()
+    description = serializers.CharField()
+    value = serializers.IntegerField(min_value=0)
+    unit = serializers.ChoiceField(choices=["count"])
+    source = serializers.CharField()
+    detail_url = serializers.CharField(allow_null=True)
+
+
+class InvestigationNextStepSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    title = serializers.CharField()
+    description = serializers.CharField()
+    detail_url = serializers.CharField(allow_null=True)
+
+
+class InvestigationNavigationSerializer(serializers.Serializer):
+    investigations_url = serializers.CharField()
+    operation_url = serializers.CharField()
+
+
+class DeliveryDelayInvestigationSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    type = serializers.ChoiceField(choices=["delivery_delays"])
+    data_status = serializers.ChoiceField(choices=["empty", "partial", "complete"])
+    period = OperationPeriodSerializer()
+    summary = InvestigationSummarySerializer(allow_null=True)
+    evidence = OperationalEvidenceSerializer(many=True)
+    timeline = InvestigationTimelineItemSerializer(many=True)
+    next_steps = InvestigationNextStepSerializer(many=True)
+    causality_notice = serializers.CharField()
+    navigation = InvestigationNavigationSerializer()
+
+
 class AlertMetricSerializer(serializers.Serializer):
     label = serializers.CharField()
     value = serializers.JSONField()

@@ -47,7 +47,7 @@ backend e produz texto; não consulta o banco nem decide ações.
 | Área | Entrada e responsabilidade |
 | --- | --- |
 | `frontend/src/main.jsx` | Bootstrap, tema, StrictMode e BrowserRouter |
-| `frontend/src/App.jsx` | Nove rotas de página dentro do layout compartilhado |
+| `frontend/src/App.jsx` | Onze rotas de página dentro do layout compartilhado |
 | `frontend/src/pages/` | Requisições, estado local e composição das telas |
 | `frontend/src/hooks/useDashboardData.js` | Leituras independentes da Home, cancelamento e atualização |
 | `frontend/src/hooks/useApiResource.js` | Estado reutilizável de leitura, retry e cancelamento da área Operação |
@@ -55,6 +55,7 @@ backend e produz texto; não consulta o banco nem decide ações.
 | `frontend/src/data/demoMetadata.js` | Origem demonstrativa; ponto de substituição pelo contrato de pipelines |
 | `frontend/src/pages/PipelinesPage.jsx` | Estado, etapas, histórico e rejeições da pipeline de pedidos |
 | `frontend/src/pages/Operation*.jsx` | Visão geral, atrasos, filial, filtros em URL e pedidos paginados |
+| `frontend/src/pages/*Investigation*.jsx` | Lista e workspace de investigação de atrasos |
 | `frontend/src/components/operation/` | Métricas, comparação, tendência, filtros e tabelas do drill-down |
 | `frontend/src/components/` | Navegação e blocos do dashboard |
 | `frontend/src/services/api.js` | URL-base, fetch e erros HTTP |
@@ -65,6 +66,7 @@ backend e produz texto; não consulta o banco nem decide ações.
 | `backend/operations/ingestion/` | Extract, Validate, Transform, Load e orquestração de pedidos |
 | `backend/operations/pipelines/` | Consultas de monitoramento para a API |
 | `backend/operations/operation/` | Agregações de leitura, comparações, tendência e paginação operacional |
+| `backend/operations/investigations/` | Composição derivada de resumo, evidências, timeline e próximos passos |
 | `backend/data/source/orders.json` | Exportação demonstrativa de ERP versionada |
 | `backend/operations/analytics/` | Consultas, comparativos, score e dashboard |
 | `backend/operations/alerts/` | Limiares, detecção e investigação determinística |
@@ -102,6 +104,23 @@ As APIs de Operação aceitam somente janelas de 7, 30 ou 90 dias. Cada janela u
 início inclusivo e fim exclusivo no fuso do Django, inclusive na agregação por filial.
 Pedidos, faturamento, clientes e atrasos respeitam a janela; estoque e chamados ativos
 continuam snapshots e são identificados assim nos contratos e na interface.
+
+## Investigações operacionais
+
+A Fase 05 acrescenta uma camada somente leitura, sem model ou migration. O serviço de
+investigações reutiliza a semântica de atraso, os limites de período e a tendência da
+Operação, além das consultas analíticas de chamados, estoque e clientes. O primeiro
+tipo disponível é `delivery_delays`, geral ou filtrado por filial.
+
+O contrato separa `summary`, `evidence`, `timeline` e `next_steps`. Cada evidência
+identifica tipo, valores, comparação, importância, fonte e link de detalhe. Estoque e
+pedidos atrasados, chamados e atrasos, ou clientes e ocorrências são apresentados como
+sinais simultâneos. Nenhum desses vínculos é tratado como causa confirmada.
+
+As rotas `/investigations` e `/investigations/delivery-delays` preservam `days` e
+`branch` na URL. A timeline contém apenas dias com pedidos realmente classificados
+como atrasados. Próximos passos são regras de navegação e revisão; não criam
+`ActionItem`. Gemini e o serviço de IA não participam desse fluxo.
 
 ## Execução e deploy encontrados
 
