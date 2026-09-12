@@ -1,47 +1,18 @@
-import { CalendarDays, Menu, Wifi, WifiOff } from "lucide-react";
-import { formatBrazilDate } from "../../utils/formatters.js";
+import { Menu } from "lucide-react";
+import { Link } from "react-router-dom";
+import { demoMetadata } from "../../data/demoMetadata.js";
+import ThemeToggle from "./ThemeToggle.jsx";
 
-const statusContent = {
-  checking: { label: "Verificando API", className: "checking", Icon: Wifi },
-  online: { label: "Sistema Online", className: "online", Icon: Wifi },
-  offline: { label: "API Offline", className: "offline", Icon: WifiOff },
-};
+const statusLabels = { checking: "Verificando conexão", online: "API disponível", offline: "API indisponível" };
 
-function Topbar({ title, subtitle, apiStatus, onMenuClick }) {
-  const status = statusContent[apiStatus] ?? statusContent.checking;
-  const StatusIcon = status.Icon;
-  // O cabeçalho mostra o dia de uso; os indicadores continuam presos à data da demo.
-  const currentDate = formatBrazilDate(new Date());
-
+export default function Topbar({ title, apiStatus, onMenuClick, menuRef, sidebarOpen }) {
   return (
     <header className="topbar">
       <div className="topbar-heading">
-        <button
-          className="mobile-menu-button"
-          type="button"
-          aria-label="Abrir navegação"
-          onClick={onMenuClick}
-        >
-          <Menu size={21} />
-        </button>
-        <div>
-          <h1>{title}</h1>
-          <p>{subtitle}</p>
-        </div>
+        <button ref={menuRef} className="mobile-menu-button" type="button" aria-label="Abrir navegação" aria-expanded={sidebarOpen} aria-controls="main-navigation" onClick={onMenuClick}><Menu size={21} aria-hidden="true" /></button>
+        <nav className="topbar-breadcrumb" aria-label="Seção atual"><Link to="/">OpsMind2</Link><span aria-hidden="true">/</span><span aria-current="page">{title}</span></nav>
       </div>
-
-      <div className="topbar-meta">
-        <span className="date-label">
-          <CalendarDays size={16} />
-          {currentDate}
-        </span>
-        <span className={`api-status ${status.className}`}>
-          <StatusIcon size={15} />
-          {status.label}
-        </span>
-      </div>
+      <div className="topbar-meta"><span className={"connection-status " + apiStatus} role="status"><i aria-hidden="true" />{statusLabels[apiStatus]}</span><ThemeToggle /><span className="demo-tag">{demoMetadata.label}</span></div>
     </header>
   );
 }
-
-export default Topbar;

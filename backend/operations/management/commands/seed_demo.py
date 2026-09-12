@@ -1,3 +1,9 @@
+"""Gera o cenário fictício; não é um importador incremental de dados externos.
+
+Catálogos, probabilidades e ordem das chamadas ao RNG fazem parte da demonstração.
+Alterá-los pode mudar os números esperados pelos testes, mesmo mantendo a seed 42.
+"""
+
 import random
 import time
 from datetime import date, datetime, time as datetime_time, timedelta
@@ -15,6 +21,8 @@ from operations.models import (
     Inventory,
     Order,
     OrderItem,
+    PipelineIssue,
+    PipelineRun,
     Product,
     Ticket,
 )
@@ -214,6 +222,8 @@ class Command(BaseCommand):
         )
 
     def _has_operational_data(self) -> bool:
+        # É uma proteção contra duplicação da demo, não um upsert: até uma carga
+        # parcial impede nova geração. Não reutilize esse critério numa futura ETL.
         return any(
             model.objects.exists()
             for model in (Branch, Customer, Product, Inventory, Order, Ticket)
@@ -222,6 +232,8 @@ class Command(BaseCommand):
     def _clear_operational_data(self) -> None:
         # As ações também são limpas para que a demonstração volte ao estado inicial.
         for model in (
+            PipelineIssue,
+            PipelineRun,
             ActionItem,
             Ticket,
             OrderItem,

@@ -1,0 +1,110 @@
+@keyframes assistant-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.feature-shell {
+  max-width: 950px;
+}
+
+.feature-intro {
+  position: relative;
+  min-height: 315px;
+  padding: 44px;
+  overflow: hidden;
+}
+
+.feature-intro::after { display: none; }
+
+.feature-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 24px;
+  color: var(--warning-strong);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-border);
+  border-radius: 13px;
+  place-items: center;
+}
+
+.feature-icon.actions {
+  color: var(--primary-700);
+  background: var(--primary-50);
+  border-color: var(--primary-border);
+}
+
+.status-pill {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 5px 8px;
+  color: var(--primary-700);
+  background: var(--primary-50);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.feature-intro h2 {
+  max-width: 560px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+.feature-intro p {
+  max-width: 600px;
+  margin: 16px 0 0;
+  color: var(--slate-500);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.feature-notes {
+  margin-top: 0;
+}
+
+.feature-note-card {
+  display: flex;
+  min-height: 118px;
+  padding: 21px;
+  color: var(--primary-700);
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.feature-note-card h3 {
+  margin: 0 0 7px;
+  color: var(--text-primary);
+  font-size: 0.77rem;
+  font-weight: 650;
+}
+
+.feature-note-card p {
+  margin: 0;
+  color: var(--slate-500);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+
+/* Estados compartilhados continuam disponíveis fora da home. Cor acompanha o
+   rótulo textual; severidade nunca depende apenas de um ponto ou de uma borda. */
+.severity-badge { display: inline-flex; padding: 4px 7px; border-radius: var(--radius-sm); font-size: 0.6875rem; font-weight: 500; }
+.severity-badge.low { color: var(--primary-700); background: var(--primary-50); }
+.severity-badge.medium, .severity-badge.high { color: var(--warning-700); background: var(--warning-100); }
+.severity-badge.critical { color: var(--danger-600); background: var(--danger-100); }
+.alert-overview-card.high::before, .investigation-header.high::before { background: var(--warning-700); }
+.severity-filter button, .action-filters button { min-height: 36px; }
+.recommendation-card button, .action-status-control select, .suggestion-list button { min-height: 40px; }
+.assistant-input-row button { font-size: var(--font-size-md); }
+.action-card h2, .alert-overview-main h2, .recommendation-card h3 { font-size: 1rem; }

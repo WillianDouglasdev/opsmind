@@ -69,6 +69,8 @@ def create_action_item(alert_key: str, recommendation_key: str) -> ActionItem:
                 source_alert_type=recommendation["alert_type"],
                 priority=recommendation["priority"],
             )
+    # O bloqueio não protege uma linha que ainda não existe. A restrição única parcial
+    # do banco cobre criações concorrentes; fora do atomic podemos consultar a vencedora.
     except IntegrityError:
         existing = ActionItem.objects.get(
             source_alert_key=alert_key,

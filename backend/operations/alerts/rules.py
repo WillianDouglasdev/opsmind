@@ -77,6 +77,8 @@ def delivery_delay_rule(metrics: dict) -> dict | None:
 
 
 def branch_performance_rule(branch: dict, overall_rate: float) -> dict | None:
+    # A chave pública depende do nome da filial e também é guardada nas ActionItems.
+    # Renomear uma filial pode mudar essa identidade; a V2 precisará tratar a transição.
     gap = round(branch["delay_rate"] - overall_rate, 2)
     if branch["total_orders"] < BRANCH_MIN_ORDERS or gap < BRANCH_DELAY_GAP_THRESHOLD:
         return None

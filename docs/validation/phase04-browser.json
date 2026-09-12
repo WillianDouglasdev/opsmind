@@ -1,0 +1,39 @@
+{
+  "executed_at": "2026-09-11",
+  "environment": {
+    "browser": "Google Chrome headless local",
+    "frontend": "http://127.0.0.1:5173",
+    "backend": "http://127.0.0.1:8001",
+    "database": "SQLite descartável com seed completo e Pipeline V1 executada"
+  },
+  "data_verified": {
+    "orders_30_days": 443,
+    "delayed_orders_30_days": 62,
+    "delay_rate": 14.0,
+    "impacted_customers": 50,
+    "contagem_delay_rate": 22.43,
+    "filtered_contagem_delays_first_page": 15
+  },
+  "flow": [
+    "Home para o drill-down de atrasos",
+    "Sidebar para Operação",
+    "Filtros combinados de filial e atraso",
+    "Detalhe de Contagem",
+    "Comparação com média das filiais",
+    "Voltar com filtros preservados",
+    "Atrasos para Contagem com contexto preservado"
+  ],
+  "responsive": [
+    { "width": 320, "routes": 4, "horizontal_overflow": false },
+    { "width": 375, "routes": 4, "horizontal_overflow": false },
+    { "width": 768, "routes": 4, "horizontal_overflow": false },
+    { "width": 1024, "routes": 4, "horizontal_overflow": false },
+    { "width": 1440, "routes": 4, "horizontal_overflow": false }
+  ],
+  "javascript_errors": [],
+  "environment_resource_notes": {
+    "blocked_remote_font_requests": true,
+    "system_font_fallback_verified": true,
+    "unrelated_missing_resource": "Uma resposta 404 de recurso estático sem impacto funcional"
+  }
+}

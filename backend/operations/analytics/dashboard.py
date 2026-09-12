@@ -84,6 +84,9 @@ def calculate_operational_health(metrics: dict) -> dict:
 
 
 def build_dashboard_summary() -> dict:
+    # Consolidação usada pela home e pelo resumo executivo. As proporções e o score
+    # ficam no backend para que cada consumidor receba a mesma regra de negócio.
+    # As consultas são independentes: ainda não há um snapshot transacional único.
     revenue = revenue_metrics()
     orders = order_metrics()
     delays = delay_metrics()

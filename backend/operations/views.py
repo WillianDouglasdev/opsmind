@@ -1,3 +1,9 @@
+"""Fronteira HTTP: valida entradas, chama os serviços e traduz erros de domínio.
+
+Novos cálculos pertencem a analytics/ ou ao serviço do domínio. Ingestão e ETL
+devem ter uma entrada própria por comando, sem executar cargas durante um GET.
+"""
+
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
@@ -20,6 +26,7 @@ from operations.analytics import (
 from operations.ai import executive_summary, query_assistant
 from operations.ai.providers import AIConfigurationError
 from operations.models import ActionItem
+from operations.pipelines import get_pipeline_detail, get_pipeline_run, list_pipelines
 from operations.serializers import (
     ActionItemSerializer,
     AlertInvestigationSerializer,
@@ -30,6 +37,8 @@ from operations.serializers import (
     DashboardChangesSerializer,
     DashboardSummarySerializer,
     DashboardTrendsSerializer,
+    PipelineRunSerializer,
+    PipelineSummarySerializer,
     RecommendationSerializer,
     UpdateActionStatusSerializer,
 )
@@ -51,6 +60,33 @@ def dashboard_trends(_request: Request) -> Response:
 def dashboard_changes(_request: Request) -> Response:
     serializer = DashboardChangesSerializer(build_dashboard_changes())
     return Response(serializer.data)
+
+
+@api_view(["GET"])
+def pipeline_collection(_request: Request) -> Response:
+    return Response(PipelineSummarySerializer(list_pipelines(), many=True).data)
+
+
+@api_view(["GET"])
+def pipeline_detail(_request: Request, pipeline_key: str) -> Response:
+    pipeline = get_pipeline_detail(pipeline_key)
+    if pipeline is None:
+        return Response(
+            {"detail": "Pipeline não encontrada."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    return Response(PipelineSummarySerializer(pipeline).data)
+
+
+@api_view(["GET"])
+def pipeline_run_detail(_request: Request, pipeline_key: str, run_id: int) -> Response:
+    run = get_pipeline_run(pipeline_key, run_id)
+    if run is None:
+        return Response(
+            {"detail": "Execução de pipeline não encontrada."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    return Response(PipelineRunSerializer(run).data)
 
 
 @api_view(["GET"])

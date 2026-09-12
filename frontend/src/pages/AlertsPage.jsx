@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BellRing, Filter } from "lucide-react";
+import { ArrowRight, BellRing, Filter, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getAlerts } from "../services/api.js";
 import { formatAlertMetric, severityLabels } from "../utils/alerts.js";
@@ -68,6 +68,7 @@ function AlertsPage() {
             className={selectedSeverity === filter.value ? "active" : ""}
             type="button"
             key={filter.value}
+            aria-pressed={selectedSeverity === filter.value}
             onClick={() => setSelectedSeverity(filter.value)}
           >
             {filter.label}
@@ -112,9 +113,10 @@ function AlertsPage() {
                   ))}
                 </div>
               </div>
-              <Link className="investigate-link" to={`/alerts/${alert.key}`}>
-                Investigar <ArrowRight size={15} />
-              </Link>
+              <nav className="alert-card-links" aria-label={`Ações para ${alert.title}`}>
+                <Link className="investigate-link" to={`/alerts/${alert.key}`}>Ver alerta <ArrowRight size={15} /></Link>
+                {["DELIVERY_DELAY_INCREASE", "BRANCH_PERFORMANCE"].includes(alert.type) && <Link className="investigate-link" to="/investigations/delivery-delays?days=30">Investigar evidências <Search size={15} /></Link>}
+              </nav>
             </article>
           ))}
         </section>

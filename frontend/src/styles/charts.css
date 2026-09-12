@@ -1,0 +1,16 @@
+.quality-donut { display: grid; grid-template-columns: 152px minmax(150px, 1fr); align-items: center; gap: 28px; }
+.quality-donut-plot { position: relative; width: 152px; height: 152px; }
+.quality-donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.quality-donut-center strong { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 600; letter-spacing: -0.05em; }
+.quality-donut-center span { color: var(--text-secondary); font-size: 0.5625rem; }
+.quality-donut-legend { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.quality-donut-legend li { display: grid; grid-template-columns: 8px minmax(70px, 1fr) auto; align-items: center; gap: 8px; font-size: 0.6875rem; }
+.quality-donut-legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--neutral-500); }
+.quality-donut-legend li.success i { background: var(--chart-success); }
+.quality-donut-legend li.danger i { background: var(--chart-danger); }
+.quality-donut-legend strong { font-variant-numeric: tabular-nums; font-weight: 600; }
+.quality-donut-legend small { grid-column: 2 / -1; color: var(--text-secondary); }
+.quality-donut.compact { grid-template-columns: 96px 1fr; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.quality-donut.compact .quality-donut-plot { width: 96px; height: 96px; }
+.quality-donut.compact .quality-donut-center strong { font-size: 0.9375rem; }
+.quality-donut.compact .quality-donut-center span { font-size: 0.5rem; }

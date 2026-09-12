@@ -1,0 +1,143 @@
+{
+  "passed": [
+    "Home: dados reais, explicação do score e tabela de tendências",
+    "Filial → investigação → adicionar ação → concluir → reabrir",
+    "Conflito real 409 informa que a ação já existe",
+    "Filtro de severidade e investigação 404",
+    "Assistente mock, resumo executivo e intenção fora do escopo",
+    "Identificação visual de fallback (resposta interceptada)",
+    "Erro parcial preserva outros blocos; Tentar novamente recupera resumo",
+    "Loading visível e recuperação após resposta atrasada",
+    "Base vazia: sem score enganoso, sem alertas e sem histórico fabricado",
+    "Drawer: foco contido, Escape, retorno de foco e fechamento ao navegar",
+    "25 combinações de tela/largura sem overflow horizontal"
+  ],
+  "layouts": [
+    {
+      "label": "home",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "alerts",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "investigation",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "actions",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "assistant",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "home",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "alerts",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "investigation",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "actions",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "assistant",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "home",
+      "width": 820,
+      "overflow": false
+    },
+    {
+      "label": "alerts",
+      "width": 820,
+      "overflow": false
+    },
+    {
+      "label": "investigation",
+      "width": 820,
+      "overflow": false
+    },
+    {
+      "label": "actions",
+      "width": 820,
+      "overflow": false
+    },
+    {
+      "label": "assistant",
+      "width": 820,
+      "overflow": false
+    },
+    {
+      "label": "home",
+      "width": 1280,
+      "overflow": false
+    },
+    {
+      "label": "alerts",
+      "width": 1280,
+      "overflow": false
+    },
+    {
+      "label": "investigation",
+      "width": 1280,
+      "overflow": false
+    },
+    {
+      "label": "actions",
+      "width": 1280,
+      "overflow": false
+    },
+    {
+      "label": "assistant",
+      "width": 1280,
+      "overflow": false
+    },
+    {
+      "label": "home",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "label": "alerts",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "label": "investigation",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "label": "actions",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "label": "assistant",
+      "width": 1440,
+      "overflow": false
+    }
+  ],
+  "jsErrors": []
+}

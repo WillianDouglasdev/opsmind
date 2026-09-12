@@ -149,6 +149,14 @@ class Order(models.Model):
         decimal_places=2,
         default=Decimal("0.00"),
     )
+    # Pedidos do seed continuam sem identificador externo. A dupla abaixo identifica
+    # somente registros sincronizados e permite reprocessar a mesma fonte sem duplicar.
+    source_system = models.CharField(max_length=64, blank=True, default="")
+    external_id = models.CharField(max_length=100, null=True, blank=True)
+
+    # O total é persistido; não existe signal ou save que o recalcule pelos itens.
+    # Hoje seed_demo faz essa soma. Uma futura carga deve gravar itens e total de forma
+    # consistente, preservando o preço da venda mesmo que Product.unit_price mude.
 
     class Meta:
         ordering = ["-created_at"]
@@ -157,6 +165,11 @@ class Order(models.Model):
             models.Index(fields=["status", "-created_at"], name="ops_order_status_created_idx"),
         ]
         constraints = [
+            models.UniqueConstraint(
+                fields=["source_system", "external_id"],
+                condition=Q(external_id__isnull=False),
+                name="unique_order_source_external_id",
+            ),
             models.CheckConstraint(
                 condition=Q(total_amount__gte=0),
                 name="order_total_non_negative",
@@ -323,3 +336,76 @@ class ActionItem(models.Model):
         if update_fields is not None and "status" in update_fields:
             kwargs["update_fields"] = set(update_fields) | {"completed_at"}
         super().save(*args, **kwargs)
+
+
+class PipelineRun(models.Model):
+    class Status(models.TextChoices):
+        RUNNING = "running", "Em execução"
+        SUCCESS = "success", "Concluída"
+        WARNING = "warning", "Concluída com rejeições"
+        FAILED = "failed", "Falhou"
+
+    class Pipeline(models.TextChoices):
+        ORDERS = "orders", "Pedidos"
+
+    pipeline_key = models.CharField(max_length=64, choices=Pipeline.choices)
+    source_name = models.CharField(max_length=200)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.RUNNING,
+    )
+    # Quatro estados pequenos bastam para representar a execução real sem criar um
+    # model por etapa. O orquestrador atualiza o JSON ao cruzar cada fronteira.
+    steps = models.JSONField(default=dict)
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    duration_ms = models.PositiveBigIntegerField(null=True, blank=True)
+    records_received = models.PositiveIntegerField(default=0)
+    records_valid = models.PositiveIntegerField(default=0)
+    records_rejected = models.PositiveIntegerField(default=0)
+    records_loaded = models.PositiveIntegerField(default=0)
+    error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-started_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["pipeline_key", "-started_at"],
+                name="ops_pipeline_key_started_idx",
+            )
+        ]
+        verbose_name = "Execução de pipeline"
+        verbose_name_plural = "Execuções de pipeline"
+
+    @property
+    def quality_percentage(self):
+        # A ausência de registros não é qualidade perfeita: sem denominador, não há taxa.
+        if not self.records_received:
+            return None
+        return round(self.records_valid / self.records_received * 100, 2)
+
+    def __str__(self) -> str:
+        return f"{self.get_pipeline_key_display()} #{self.pk} · {self.status}"
+
+
+class PipelineIssue(models.Model):
+    run = models.ForeignKey(
+        PipelineRun,
+        on_delete=models.CASCADE,
+        related_name="issues",
+    )
+    record_identifier = models.CharField(max_length=120)
+    code = models.CharField(max_length=64)
+    message = models.TextField()
+    detected_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+        indexes = [models.Index(fields=["run", "id"], name="ops_issue_run_id_idx")]
+        verbose_name = "Rejeição de pipeline"
+        verbose_name_plural = "Rejeições de pipeline"
+
+    def __str__(self) -> str:
+        return f"{self.record_identifier}: {self.message}"

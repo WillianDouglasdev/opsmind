@@ -3,8 +3,10 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Protocol
 
+import httpx
 from django.conf import settings
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import ValidationError
 
@@ -22,12 +24,36 @@ from operations.ai.prompts import (
 GEMINI_TIMEOUT_MS = 30_000
 
 
-class AIConfigurationError(Exception):
-    pass
+class AIError(Exception):
+    error_type = "ai_error"
 
 
-class AIProviderError(Exception):
-    pass
+class AIConfigurationError(AIError):
+    error_type = "configuration_error"
+
+
+class AIProviderError(AIError):
+    def __init__(self, message: str, *, error_type: str):
+        super().__init__(message)
+        self.error_type = error_type
+
+
+def provider_error_type(error: Exception, stage: str) -> str:
+    """Classifica falhas sem inspecionar mensagens ou conteudo do provider."""
+    if isinstance(error, AIError):
+        return error.error_type
+    if isinstance(error, (TimeoutError, httpx.TimeoutException)):
+        return "timeout"
+    if isinstance(error, genai_errors.APIError):
+        if error.code in {401, 403}:
+            return "authentication_error"
+        if error.code == 404:
+            return "invalid_model"
+        if error.code in {408, 504}:
+            return "timeout"
+    if stage == "classification":
+        return "classification_error"
+    return "generation_error"
 
 
 class AIProvider(Protocol):
@@ -116,6 +142,8 @@ class MockAIProvider:
 
 
 class GeminiProvider:
+    # Este é o único adaptador do SDK. O limite é por chamada: uma pergunta pode
+    # classificar a intenção e depois gerar a explicação em duas chamadas sequenciais.
     name = "gemini"
 
     def __init__(self, api_key: str, model: str):
@@ -140,7 +168,10 @@ class GeminiProvider:
                 ),
             )
         except Exception as error:
-            raise AIProviderError("Falha ao classificar a intenção com o provider.") from error
+            raise AIProviderError(
+                "Falha ao classificar a intenção com o provider.",
+                error_type=provider_error_type(error, "classification"),
+            ) from error
 
         try:
             if isinstance(response.parsed, IntentClassification):
@@ -149,14 +180,21 @@ class GeminiProvider:
                 return IntentClassification.model_validate(response.parsed)
             if response.text:
                 return IntentClassification.model_validate_json(response.text)
-        except (ValidationError, ValueError, TypeError):
-            pass
-        # Uma saída vazia ou inválida fica fora do escopo em vez de ser adivinhada.
-        return IntentClassification(intent=Intent.UNKNOWN, confidence=0.0)
+        except (ValidationError, ValueError, TypeError) as error:
+            raise AIProviderError(
+                "O provider retornou uma classificação inválida.",
+                error_type="invalid_response",
+            ) from error
+        raise AIProviderError(
+            "O provider retornou uma classificação vazia.",
+            error_type="invalid_response",
+        )
 
     def explain(self, question: str, intent: Intent, context: dict) -> str:
         try:
             # O Gemini recebe métricas prontas e não possui acesso ao ORM ou ao banco.
+            # A explicação é texto livre; o schema validado é o da classificação.
+            # Os números verificáveis da resposta permanecem no campo evidence da API.
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=build_explanation_prompt(question, intent, context),
@@ -167,9 +205,15 @@ class GeminiProvider:
                 ),
             )
         except Exception as error:
-            raise AIProviderError("Falha ao gerar a explicação com o provider.") from error
+            raise AIProviderError(
+                "Falha ao gerar a explicação com o provider.",
+                error_type=provider_error_type(error, "generation"),
+            ) from error
         if not response.text or not response.text.strip():
-            raise AIProviderError("O provider retornou uma resposta vazia.")
+            raise AIProviderError(
+                "O provider retornou uma resposta vazia.",
+                error_type="invalid_response",
+            )
         return response.text.strip()
 
 

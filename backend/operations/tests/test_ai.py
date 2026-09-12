@@ -1,5 +1,10 @@
+import logging
+from types import SimpleNamespace
+
+import httpx
 import pytest
 from django.core.management import call_command
+from google.genai import errors as genai_errors
 from pydantic import ValidationError
 from rest_framework.test import APIClient
 
@@ -8,11 +13,32 @@ from operations.ai.intents import (
     IntentClassification,
     classify_intent_locally,
 )
-from operations.ai.providers import AIConfigurationError, MockAIProvider, get_ai_provider
-from operations.ai.service import CONTEXT_BUILDERS, executive_summary, query_assistant
+from operations.ai.providers import (
+    AIConfigurationError,
+    AIProviderError,
+    GeminiProvider,
+    MockAIProvider,
+    get_ai_provider,
+    provider_error_type,
+)
+from operations.ai.service import (
+    AIMissingContextError,
+    CONTEXT_BUILDERS,
+    executive_summary,
+    query_assistant,
+)
 from operations.analytics.queries import delay_metrics
 
 pytestmark = pytest.mark.django_db
+
+
+def _gemini_provider(generate_content) -> GeminiProvider:
+    provider = object.__new__(GeminiProvider)
+    provider.model = "gemini-test"
+    provider.client = SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content)
+    )
+    return provider
 
 
 @pytest.fixture(scope="module")
@@ -44,6 +70,86 @@ def test_local_intent_classification(question: str, expected_intent: Intent) -> 
 def test_intent_contract_rejects_invalid_values() -> None:
     with pytest.raises(ValidationError):
         IntentClassification(intent="INVALID", confidence=0.9)
+
+
+@pytest.mark.parametrize(
+    ("error", "stage", "expected_type"),
+    [
+        (httpx.TimeoutException("request timed out"), "generation", "timeout"),
+        (
+            genai_errors.APIError(401, {"message": "unauthorized"}),
+            "classification",
+            "authentication_error",
+        ),
+        (
+            genai_errors.APIError(404, {"message": "model not found"}),
+            "generation",
+            "invalid_model",
+        ),
+        (RuntimeError("classification failed"), "classification", "classification_error"),
+        (RuntimeError("generation failed"), "generation", "generation_error"),
+    ],
+)
+def test_provider_errors_are_classified(error, stage: str, expected_type: str) -> None:
+    assert provider_error_type(error, stage) == expected_type
+
+
+def test_gemini_rejects_invalid_classification_response() -> None:
+    provider = _gemini_provider(
+        lambda **_kwargs: SimpleNamespace(
+            parsed={"intent": "INVALID", "confidence": 0.9},
+            text=None,
+        )
+    )
+
+    with pytest.raises(AIProviderError) as captured:
+        provider.classify_intent("Analise os atrasos.")
+
+    assert captured.value.error_type == "invalid_response"
+
+
+def test_gemini_rejects_empty_generation_response() -> None:
+    provider = _gemini_provider(
+        lambda **_kwargs: SimpleNamespace(parsed=None, text="   ")
+    )
+
+    with pytest.raises(AIProviderError) as captured:
+        provider.explain("Analise os atrasos.", Intent.DELIVERY_DELAYS, {})
+
+    assert captured.value.error_type == "invalid_response"
+
+
+@pytest.mark.parametrize(
+    ("method", "expected_type"),
+    [
+        ("classify_intent", "classification_error"),
+        ("explain", "generation_error"),
+    ],
+)
+def test_gemini_wraps_stage_failures(method: str, expected_type: str) -> None:
+    def fail(**_kwargs):
+        raise RuntimeError("provider unavailable")
+
+    provider = _gemini_provider(fail)
+
+    with pytest.raises(AIProviderError) as captured:
+        if method == "classify_intent":
+            provider.classify_intent("Analise os atrasos.")
+        else:
+            provider.explain("Analise os atrasos.", Intent.DELIVERY_DELAYS, {})
+
+    assert captured.value.error_type == expected_type
+
+
+def test_missing_required_context_does_not_fallback(monkeypatch) -> None:
+    monkeypatch.setitem(
+        CONTEXT_BUILDERS,
+        Intent.DELIVERY_DELAYS,
+        lambda: ({"delayed_orders": 1}, []),
+    )
+
+    with pytest.raises(AIMissingContextError):
+        query_assistant("Por que os atrasos aumentaram?", MockAIProvider())
 
 
 def test_mock_service_uses_real_evidence(full_demo) -> None:
@@ -101,6 +207,31 @@ def test_provider_failure_uses_identified_fallback(full_demo) -> None:
     assert result["provider"] == "fallback"
     assert result["intent"] == Intent.DELIVERY_DELAYS.value
     assert result["answer"]
+
+
+def test_failure_logs_do_not_expose_secrets(caplog) -> None:
+    secrets = (
+        "gemini-key-super-secret",
+        "postgresql://user:database-secret@example.test/db",
+        "django-secret-value",
+    )
+
+    class SecretFailingProvider:
+        name = "gemini"
+
+        def classify_intent(self, question: str):
+            raise RuntimeError(" ".join(secrets))
+
+        def explain(self, question: str, intent: Intent, context: dict):
+            raise AssertionError("UNKNOWN must not generate an explanation")
+
+    caplog.set_level(logging.WARNING, logger="operations.ai.service")
+    result = query_assistant("Qual é a previsão do tempo?", SecretFailingProvider())
+
+    assert result["provider"] == "fallback"
+    assert "stage=classification" in caplog.text
+    assert "error_type=classification_error" in caplog.text
+    assert all(secret not in caplog.text for secret in secrets)
 
 
 def test_explanation_failure_uses_identified_fallback(full_demo) -> None:
