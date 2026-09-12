@@ -5,10 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="OpsMind — Inteligência Operacional com IA"
+      content="OpsMind2 — Inteligência Operacional com IA"
     />
-    <meta name="theme-color" content="#101c2c" />
-    <title>OpsMind | Inteligência Operacional</title>
+    <meta name="theme-color" content="#fafaf7" />
+    <script>
+      (() => {
+        // O atributo é definido antes do CSS/React para evitar um primeiro frame no tema incorreto.
+        try {
+          const saved = localStorage.getItem("opsmind-theme");
+          const theme = saved === "light" || saved === "dark"
+            ? saved
+            : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#111714" : "#fafaf7";
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <title>OpsMind2 | Inteligência Operacional</title>
   </head>
   <body>
     <div id="root"></div>

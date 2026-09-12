@@ -68,6 +68,7 @@ function AlertsPage() {
             className={selectedSeverity === filter.value ? "active" : ""}
             type="button"
             key={filter.value}
+            aria-pressed={selectedSeverity === filter.value}
             onClick={() => setSelectedSeverity(filter.value)}
           >
             {filter.label}

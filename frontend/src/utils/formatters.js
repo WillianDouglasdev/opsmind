@@ -67,3 +67,14 @@ export function formatBrazilDate(value) {
 export function formatDateTime(value) {
   return dateTimeFormatter.format(new Date(value));
 }
+
+export function formatRelativeTime(value, now = new Date()) {
+  if (!value) return "Nunca executado";
+  const seconds = Math.round((new Date(value).getTime() - now.getTime()) / 1000);
+  const absolute = Math.abs(seconds);
+  const formatter = new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" });
+  if (absolute < 60) return formatter.format(seconds, "second");
+  if (absolute < 3600) return formatter.format(Math.round(seconds / 60), "minute");
+  if (absolute < 86400) return formatter.format(Math.round(seconds / 3600), "hour");
+  return formatter.format(Math.round(seconds / 86400), "day");
+}

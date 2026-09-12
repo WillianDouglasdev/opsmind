@@ -1,16 +1,36 @@
-# OpsMind
+# OpsMind2
 
-**Inteligência Operacional apoiada por IA**
+**Central de Inteligência Operacional**
 
-> **Current Stage: Production Ready / Pre-Deploy**
+> **Estágio atual: demo funcional — OpsMind2 com Operação e drill-down**
 
-OpsMind é uma prova de conceito de uma plataforma de inteligência operacional. O
-estágio atual combina analytics, investigações determinísticas e IA explicativa com
-recomendações controladas e um plano de ação persistido, sem transferir cálculos ou
-decisões operacionais para o modelo generativo.
+OpsMind2 é uma prova de conceito de uma plataforma de inteligência operacional. Oestágio atual combina analytics, exploração por filiais e pedidos, pipeline real,
+investigações determinísticas e IA explicativa com recomendações controladas e um
+plano de ação persistido, sem transferir cálculos ou decisões operacionais para o
+modelo generativo.
 
 A demonstração representa a empresa fictícia **Vértice Operações**, com cinco
 filiais em Minas Gerais. Todos os nomes, valores e eventos são sintéticos.
+
+## Documentação para desenvolvimento em equipe
+
+- [Arquitetura e fluxo de dados](docs/ARCHITECTURE.md)
+- [Guia do backend e preparação para pipelines](docs/BACKEND_GUIDE.md)
+- [Guia do frontend e organização dos estilos](docs/FRONTEND_GUIDE.md)
+- [Roadmap evolutivo da V2](docs/ROADMAP_V2.md)
+- [Auditoria da Fase 01, alterações e validações](docs/AUDIT_PHASE01.md)
+- [Fase 02: identidade visual, Home e validação em navegador](docs/PHASE02_REPORT.md)
+- [Pipeline de dados: operação e contrato](docs/DATA_PIPELINE.md)
+- [Fase 03: implementação e validação da Pipeline V1](docs/PHASE03_REPORT.md)
+- [Fase 04: Operação, drill-down e validação visual](docs/PHASE04_REPORT.md)
+- [Fase 03.5: identidade OpsMind2, cores e modo noturno](docs/PHASE035_REPORT.md)
+
+A Fase 01 organizou a base e a Fase 02 evoluiu a identidade visual. A Fase 03
+introduziu ingestão real de pedidos, rejeições rastreáveis, qualidade e freshness,
+preservando o seed e os contratos anteriores. A Fase 04 tornou atrasos, filiais e
+pedidos navegáveis, com comparação, filtros em URL e paginação.
+A Fase 03.5 foi aplicada sobre esse estado para apresentar o produto como OpsMind2,
+adicionar tema escuro persistido e usar cor como informação, sem mudar o backend.
 
 ## Stack
 
@@ -38,6 +58,13 @@ models extras de analytics e sem persistir resultados calculados.
 | `PATCH /api/actions/{id}/` | Alteração exclusiva do status da ação |
 | `POST /api/assistant/query/` | Consulta operacional em linguagem natural |
 | `POST /api/assistant/executive-summary/` | Resumo executivo não persistido |
+| `GET /api/data/pipelines/` | Catálogo e último estado das pipelines |
+| `GET /api/data/pipelines/orders/` | Última execução/publicação e histórico de pedidos |
+| `GET /api/data/pipelines/orders/runs/{id}/` | Contagens, etapas e rejeições da execução |
+| `GET /api/operation/overview/` | Resumo, comparação de filiais e pontos de atenção |
+| `GET /api/operation/delays/` | Taxa de atraso e contribuição por filial |
+| `GET /api/operation/branches/{id}/` | Métricas, tendência e comparação da filial |
+| `GET /api/operation/orders/` | Pedidos paginados com período, filial, status e atraso |
 | `GET /api/health/` | Disponibilidade da API |
 
 Regras de cálculo:
@@ -47,8 +74,9 @@ Regras de cálculo:
   anteriores;
 - faturamento desconsidera pedidos cancelados;
 - chamados ativos incluem os status `open` e `in_progress`;
-- atraso considera pedidos entregues depois da promessa ou ainda não entregues após
-  a data prometida;
+- o KPI de atraso conta pedidos com `status=delayed`; o seed atribui esse status a
+  entregas tardias ou atrasos ainda abertos. A consulta não recalcula o status pelas
+  datas, e seu denominador inclui todos os pedidos do período;
 - estoque crítico é um snapshot atual e, portanto, aparece como condição vigente,
   não como uma variação histórica inventada;
 - a tendência mensal representa entregas no prazo, e não um histórico artificial do
@@ -60,8 +88,10 @@ afetados e desvio da filial com pior atraso. O resultado é limitado entre 0 e 1
 classificado em `Saudável`, `Atenção`, `Risco moderado` ou `Risco alto`. Os componentes
 e impactos são devolvidos pela API para manter o cálculo explicável.
 
-As consultas usam o Django ORM, exceto a consolidação da taxa de atraso por filial,
-que utiliza SQL explícito parametrizado e compatível com SQLite e PostgreSQL.
+As consultas usam o Django ORM. A consolidação por filial, antes escrita em SQL,
+agora usa as mesmas fronteiras conscientes de fuso das métricas gerais. A Fase 04
+acrescentou testes nas viradas de dia em SQLite; PostgreSQL/Supabase ainda requer uma
+execução dedicada antes de afirmar paridade entre bancos.
 
 ## Alertas e investigação
 
@@ -86,7 +116,7 @@ tratada como correlação operacional: o sistema não afirma causalidade sem dad
 a comprovem. Todo texto é determinístico e nenhuma IA participa da detecção,
 severidade ou seleção das evidências.
 
-## OpsMind AI
+## OpsMind2 AI
 
 O assistente suporta apenas as intenções `DELIVERY_DELAYS`, `CUSTOMER_RISK`,
 `INVENTORY_RISK`, `BRANCH_PERFORMANCE`, `TICKET_ANALYSIS`, `EXECUTIVE_SUMMARY` e
@@ -164,11 +194,13 @@ Copy-Item .env.example .env
 cd backend
 python manage.py migrate
 python manage.py seed_demo
+python manage.py run_data_pipeline orders
 python manage.py runserver
 ```
 
 Com `DATABASE_URL` ausente ou vazia, o Django usa `backend/db.sqlite3`. Para recriar
-os dados operacionais e remover todas as Action Items da demonstração, execute:
+os dados operacionais e remover Action Items e histórico de pipelines da demonstração,
+execute:
 
 ```powershell
 cd backend
@@ -212,17 +244,24 @@ Remove-Item Env:DATABASE_URL
 ```
 
 Execute `seed_demo --reset` apenas depois de confirmar que o destino é o banco de
-demonstração do OpsMind e que não contém dados que precisem ser preservados. A string
+demonstração do OpsMind2 e que não contém dados que precisem ser preservados. A string
 real de conexão nunca deve ser commitada. No runtime da API, configure também
-`DJANGO_DEBUG=False`, `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS` e
-`CORS_ALLOWED_ORIGINS` com os domínios que serão definidos na Fase 7B. O Django
-reconhece o `X-Forwarded-Proto` enviado pela Vercel e exige HTTPS em produção; HSTS
-será definido somente após a confirmação do domínio público.
+`DJANGO_DEBUG=False` e `DJANGO_SECRET_KEY`. O Django reconhece o
+`X-Forwarded-Proto` enviado pela Vercel e exige HTTPS em produção; HSTS será definido
+somente após a confirmação do domínio público.
 
-A arquitetura planejada usa dois projetos Vercel apontando para o mesmo repositório:
-o frontend com Root Directory `frontend` e a API Django com Root Directory `backend`.
-Com essa raiz, `manage.py`, `config/wsgi.py` e `requirements.txt` já ficam nas posições
-esperadas pela detecção do Django. Nenhum deploy é executado nesta fase.
+Na Vercel, `VERCEL_URL`, `VERCEL_PROJECT_PRODUCTION_URL` e `VERCEL_BRANCH_URL` são
+convertidas automaticamente em hosts permitidos e origins HTTPS confiáveis. Isso
+abrange produção e previews sem usar `ALLOWED_HOSTS = ["*"]`. Mantenha
+`DJANGO_ALLOWED_HOSTS` e `CSRF_TRUSTED_ORIGINS` apenas para domínios adicionais que
+não sejam fornecidos pelas System Environment Variables da plataforma.
+
+O `vercel.json` atual declara serviços `frontend` e `backend`, com rewrite de `/api`
+para a API e das demais rotas para o frontend. Em produção sem `VITE_API_URL`, o
+cliente usa essa mesma origem. Se o ambiente utilizar dois projetos separados,
+configure `VITE_API_URL` com a URL pública do backend e autorize o frontend no CORS.
+Esta descrição reflete os arquivos locais; o painel e o deploy da Vercel não foram
+validados nesta fase.
 
 ## Variáveis de ambiente
 
@@ -250,19 +289,23 @@ opsmind/
 ├── backend/
 │   ├── config/                    # configuração e rotas Django
 │   ├── core/                      # health check
+│   ├── data/source/               # exportação demonstrativa de pedidos
 │   └── operations/
 │       ├── analytics/             # consultas e composição do dashboard
 │       ├── alerts/                # regras, engine e investigações determinísticas
 │       ├── ai/                    # intents, prompts, providers e serviço do assistente
 │       ├── actions/               # catálogo e serviço do plano de ação
-│       ├── management/commands/   # seed_demo
+│       ├── ingestion/             # extract, validate, transform, load e orquestração
+│       ├── pipelines/             # leitura do monitoramento para a API
+│       ├── operation/             # agregações e paginação do drill-down operacional
+│       ├── management/commands/   # seed_demo e run_data_pipeline
 │       ├── migrations/            # schema versionado
 │       ├── tests/                 # models, analytics, IA e endpoints
 │       ├── serializers.py         # contratos de saída da API
 │       ├── urls.py
 │       └── views.py
 └── frontend/
-    └── src/                       # dashboard e OpsMind AI conectados à API
+    └── src/                       # dashboard e OpsMind2 AI conectados à API
 ```
 
 ## Qualidade
@@ -270,13 +313,19 @@ opsmind/
 ```powershell
 cd backend
 ..\.venv\Scripts\python.exe -m pytest
-..\.venv\Scripts\python.exe manage.py check
-..\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+..\.venv\Scripts\python.exe manage.py check --settings=config.test_settings
+..\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run --settings=config.test_settings
 
 cd ..\frontend
 npm run lint
 npm run build
+npm test
 ```
+
+O pytest usa `config.test_settings`: SQLite em memória e IA mock, independentemente
+do `.env` da demo. Os checks acima usam o mesmo ambiente isolado; não validam acesso
+ao Supabase nem configuração de produção. Não use esse módulo no deploy. Os testes
+do cenário executam reset/flush somente no banco descartável da suíte.
 
 ## Limites desta fase
 

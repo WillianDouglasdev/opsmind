@@ -1,3 +1,5 @@
+// Em produção, a ausência de VITE_API_URL usa /api na mesma origem (rewrite da Vercel).
+// Em projetos separados, configure a URL pública da API no build e o CORS no backend.
 const API_URL = (
   import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD ? "" : "http://127.0.0.1:8000")
@@ -17,6 +19,8 @@ async function request(path, options = {}) {
     } catch {
       data = null;
     }
+    // Preservamos status e payload: a investigação usa 404 e a criação de ação usa
+    // 409 para informar que a recomendação já está no plano. Não converta erros em [].
     const error = new Error(
       data?.detail || `A API respondeu com o status ${response.status}.`,
     );
@@ -42,6 +46,42 @@ export function getDashboardTrends(options) {
 
 export function getDashboardChanges(options) {
   return request("/api/dashboard/changes/", options);
+}
+
+function operationQuery(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+  });
+  return query.toString();
+}
+
+export function getOperationOverview(days = 30, options) {
+  return request(`/api/operation/overview/?${operationQuery({ days })}`, options);
+}
+
+export function getOperationDelays(days = 30, options) {
+  return request(`/api/operation/delays/?${operationQuery({ days })}`, options);
+}
+
+export function getOperationBranch(branchId, days = 30, options) {
+  return request(`/api/operation/branches/${encodeURIComponent(branchId)}/?${operationQuery({ days })}`, options);
+}
+
+export function getOperationOrders(params, options) {
+  return request(`/api/operation/orders/?${operationQuery(params)}`, options);
+}
+
+export function getPipelines(options) {
+  return request("/api/data/pipelines/", options);
+}
+
+export function getPipeline(pipelineKey, options) {
+  return request(`/api/data/pipelines/${encodeURIComponent(pipelineKey)}/`, options);
+}
+
+export function getPipelineRun(pipelineKey, runId, options) {
+  return request(`/api/data/pipelines/${encodeURIComponent(pipelineKey)}/runs/${encodeURIComponent(runId)}/`, options);
 }
 
 export function getAlerts(options) {

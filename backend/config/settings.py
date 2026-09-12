@@ -5,6 +5,8 @@ import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
+from config.environment import build_allowed_hosts, build_csrf_trusted_origins
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
 
@@ -40,9 +42,9 @@ AI_PROVIDER = (os.getenv("AI_PROVIDER") or "mock").strip().lower()
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODEL = (os.getenv("GEMINI_MODEL") or "").strip()
 
-ALLOWED_HOSTS = env_list(
-    "DJANGO_ALLOWED_HOSTS",
-    default=["127.0.0.1", "localhost", "testserver"],
+ALLOWED_HOSTS = build_allowed_hosts(
+    env_list("DJANGO_ALLOWED_HOSTS", default=[]),
+    include_testserver=DEBUG,
 )
 
 INSTALLED_APPS = [
@@ -128,7 +130,9 @@ CORS_ALLOWED_ORIGINS = env_list(
         "http://127.0.0.1:5173",
     ],
 )
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", default=[])
+CSRF_TRUSTED_ORIGINS = build_csrf_trusted_origins(
+    env_list("CSRF_TRUSTED_ORIGINS", default=[])
+)
 
 # A Vercel informa o protocolo original por proxy; em produção, cookies e tráfego ficam em HTTPS.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

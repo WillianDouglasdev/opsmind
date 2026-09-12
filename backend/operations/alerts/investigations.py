@@ -1,3 +1,9 @@
+"""Amplia alertas ativos com evidências determinísticas e contexto de recomendações.
+
+_recommendation_context é um contrato interno consumido por actions/recommendations;
+o serializer o omite da API. Preserve seus campos ao editar os textos da investigação.
+"""
+
 from operations.alerts.engine import get_alert
 from operations.analytics.queries import (
     branch_delay_rates,

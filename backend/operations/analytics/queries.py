@@ -1,13 +1,19 @@
+"""Consultas operacionais compartilhadas por dashboard, alertas e assistente.
+
+Esta camada lê os models, sem conhecer o comando seed_demo. O acoplamento atual
+à demonstração é a data padrão; uma futura ingestão deve preservar os significados
+dos campos antes de alimentar estas consultas. Ver docs/BACKEND_GUIDE.md.
+"""
+
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
-from django.db import connection
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, IntegerField, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 from django.utils import timezone
 
 from operations.demo import DEMO_REFERENCE_DATE
-from operations.models import Customer, Inventory, Order, Product, Ticket
+from operations.models import Branch, Customer, Inventory, Order, Product, Ticket
 
 VALID_REVENUE_STATUSES = [
     Order.Status.PENDING,
@@ -94,6 +100,10 @@ def delay_metrics(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
     )
     current_total = current_orders.count()
     previous_total = previous_orders.count()
+    # O seed marca como delayed tanto entregas tardias quanto atrasos ainda abertos.
+    # Aqui não inferimos o status pelas datas. Uma carga externa precisa normalizá-lo;
+    # trocar esse critério alteraria dashboard, alertas, investigações e contexto da IA.
+    # O denominador inclui todos os pedidos do período, inclusive os cancelados.
     current_delayed = current_orders.filter(status=Order.Status.DELAYED).count()
     previous_delayed = previous_orders.filter(status=Order.Status.DELAYED).count()
     current_rate_raw = current_delayed / current_total * 100 if current_total else 0.0
@@ -113,6 +123,7 @@ def delay_metrics(reference_date: date = DEMO_REFERENCE_DATE) -> dict:
 
 
 def active_ticket_metrics() -> dict:
+    # Este é o estado de toda a base, sem recorte de 30 dias nem reconstrução histórica.
     active_statuses = [Ticket.Status.OPEN, Ticket.Status.IN_PROGRESS]
     active = Ticket.objects.filter(status__in=active_statuses).count()
     total = Ticket.objects.count()
@@ -369,36 +380,43 @@ def strategic_customer_impact(reference_date: date = DEMO_REFERENCE_DATE) -> dic
 
 def branch_delay_rates(reference_date: date = DEMO_REFERENCE_DATE) -> list[dict]:
     current_start, current_end = comparison_periods(reference_date)["current"]
-
-    # O SQL explícito deixa o agrupamento por filial igual em SQLite e PostgreSQL.
-    sql = """
-        SELECT
-            branch.id,
-            branch.name,
-            COUNT(orders.id) AS total_orders,
-            SUM(CASE WHEN orders.status = %s THEN 1 ELSE 0 END) AS delayed_orders
-        FROM operations_branch AS branch
-        LEFT JOIN operations_order AS orders
-            ON orders.branch_id = branch.id
-            AND orders.created_at >= %s
-            AND orders.created_at <= %s
-        GROUP BY branch.id, branch.name
-        ORDER BY delayed_orders DESC, branch.name ASC
-    """
-    with connection.cursor() as cursor:
-        cursor.execute(sql, [Order.Status.DELAYED, current_start, current_end])
-        rows = cursor.fetchall()
-
-    return [
-        {
-            "branch_id": branch_id,
-            "branch_name": name,
-            "total_orders": total,
-            "delayed_orders": delayed or 0,
-            "delay_rate": round((delayed or 0) / total * 100, 2) if total else 0.0,
-        }
-        for branch_id, name, total, delayed in rows
-    ]
+    # A mesma expressão ORM usada pelos demais recortes deixa a adaptação de datetime
+    # a cargo do backend de banco. Isso remove a divergência do SQL manual no SQLite
+    # e mantém os limites explícitos para PostgreSQL.
+    rows = Branch.objects.annotate(
+        total_orders=Count(
+            "orders",
+            filter=Q(
+                orders__created_at__gte=current_start,
+                orders__created_at__lte=current_end,
+            ),
+        ),
+        delayed_orders=Count(
+            "orders",
+            filter=Q(
+                orders__created_at__gte=current_start,
+                orders__created_at__lte=current_end,
+                orders__status=Order.Status.DELAYED,
+            ),
+        ),
+    ).values("id", "name", "total_orders", "delayed_orders")
+    return sorted(
+        [
+            {
+                "branch_id": row["id"],
+                "branch_name": row["name"],
+                "total_orders": row["total_orders"],
+                "delayed_orders": row["delayed_orders"],
+                "delay_rate": (
+                    round(row["delayed_orders"] / row["total_orders"] * 100, 2)
+                    if row["total_orders"]
+                    else 0.0
+                ),
+            }
+            for row in rows
+        ],
+        key=lambda row: (-row["delayed_orders"], row["branch_name"]),
+    )
 
 
 def monthly_on_time_delivery(reference_date: date = DEMO_REFERENCE_DATE) -> list[dict]:

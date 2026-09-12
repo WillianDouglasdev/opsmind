@@ -1,7 +1,15 @@
 import logging
 
+from django.conf import settings
+
 from operations.ai.intents import Intent, IntentClassification, classify_intent_locally
-from operations.ai.providers import AIProvider, MockAIProvider, get_ai_provider
+from operations.ai.providers import (
+    AIError,
+    AIProvider,
+    MockAIProvider,
+    get_ai_provider,
+    provider_error_type,
+)
 from operations.alerts.engine import get_active_alerts
 from operations.analytics.dashboard import build_dashboard_summary
 from operations.analytics.queries import (
@@ -18,6 +26,10 @@ from operations.analytics.queries import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class AIMissingContextError(AIError):
+    error_type = "missing_context"
 
 UNKNOWN_ANSWER = (
     "Atualmente consigo analisar entregas, filiais, estoque, clientes estratégicos, "
@@ -204,21 +216,125 @@ CONTEXT_BUILDERS = {
     Intent.EXECUTIVE_SUMMARY: _executive_context,
 }
 
+REQUIRED_CONTEXT_PATHS = {
+    Intent.DELIVERY_DELAYS: (
+        ("delayed_orders",),
+        ("current_rate",),
+        ("previous_rate",),
+        ("growth_percentage",),
+        ("worst_branch", "name"),
+        ("worst_branch", "delay_rate"),
+        ("worst_branch", "delayed_orders"),
+        ("delivery_tickets", "change_percentage"),
+    ),
+    Intent.BRANCH_PERFORMANCE: (
+        ("branch", "name"),
+        ("branch", "delay_rate"),
+        ("branch", "delayed_orders"),
+        ("overall_rate",),
+        ("gap_percentage_points",),
+    ),
+    Intent.INVENTORY_RISK: (
+        ("occurrences",),
+        ("product_count",),
+        ("total_deficit",),
+        ("related_delayed_orders",),
+    ),
+    Intent.CUSTOMER_RISK: (
+        ("affected_customers",),
+        ("revenue",),
+        ("delayed_orders",),
+        ("tickets",),
+    ),
+    Intent.TICKET_ANALYSIS: (
+        ("total",),
+        ("active",),
+        ("delivery_previous",),
+        ("delivery_recent",),
+        ("delivery_change_percentage",),
+    ),
+    Intent.EXECUTIVE_SUMMARY: (
+        ("operational_health", "score"),
+        ("operational_health", "status"),
+        ("revenue",),
+        ("orders",),
+        ("delay_rate",),
+        ("active_tickets",),
+        ("primary_alert",),
+    ),
+}
+
+
+def _validate_context(intent: Intent, context: dict) -> None:
+    if not isinstance(context, dict):
+        raise AIMissingContextError("O contexto analítico não é um objeto.")
+
+    missing = []
+    for path in REQUIRED_CONTEXT_PATHS[intent]:
+        current = context
+        for part in path:
+            if not isinstance(current, dict) or part not in current:
+                missing.append(".".join(path))
+                break
+            current = current[part]
+    if missing:
+        raise AIMissingContextError(
+            "O contexto analítico não contém todos os campos obrigatórios."
+        )
+
+
+def _log_success(provider: str, stage: str, **details) -> None:
+    suffix = " ".join(f"{key}={value}" for key, value in details.items())
+    logger.info(
+        "[AI] provider=%s stage=%s status=success%s",
+        provider,
+        stage,
+        f" {suffix}" if suffix else "",
+    )
+
+
+def _log_failure(provider: str, stage: str, error: Exception) -> None:
+    if stage == "context":
+        error_type = getattr(error, "error_type", "context_error")
+    elif stage == "configuration":
+        error_type = getattr(error, "error_type", "configuration_error")
+    else:
+        error_type = provider_error_type(error, stage)
+    logger.warning(
+        "[AI] provider=%s stage=%s status=failed error_type=%s",
+        provider,
+        stage,
+        error_type,
+        exc_info=True,
+    )
+
 
 def _fallback_provider(question: str) -> tuple[MockAIProvider, IntentClassification]:
     return MockAIProvider(), classify_intent_locally(question)
 
 
 def query_assistant(question: str, provider: AIProvider | None = None) -> dict:
-    active_provider = provider or get_ai_provider()
+    # Configuração inválida deve chegar à view como 503, por isso a seleção do provider
+    # fica fora do fallback. Falhas nas chamadas podem usar a explicação local.
+    try:
+        active_provider = provider or get_ai_provider()
+    except Exception as error:
+        _log_failure(settings.AI_PROVIDER, "configuration", error)
+        raise
     provider_name = active_provider.name
     try:
         classification = active_provider.classify_intent(question)
-    except Exception:
+    except Exception as error:
         # O fallback local preserva a consulta e o provider retornado deixa isso explícito.
-        logger.warning("Falha na classificação do provider; ativando fallback local.")
+        _log_failure(provider_name, "classification", error)
         active_provider, classification = _fallback_provider(question)
         provider_name = "fallback"
+    _log_success(
+        provider_name,
+        "classification",
+        intent=classification.intent.value,
+        confidence=classification.confidence,
+    )
 
     # UNKNOWN encerra o fluxo antes de consultar analytics ou usar o modelo como chatbot geral.
     if classification.intent == Intent.UNKNOWN:
@@ -230,14 +346,23 @@ def query_assistant(question: str, provider: AIProvider | None = None) -> dict:
             "provider": provider_name,
         }
 
-    context, evidence = CONTEXT_BUILDERS[classification.intent]()
+    # Evidências são montadas antes da geração e retornadas pelo backend. O fallback
+    # reaproveita esses dados; ele não corrige falhas de consulta ou dados incompletos.
+    try:
+        context, evidence = CONTEXT_BUILDERS[classification.intent]()
+        _validate_context(classification.intent, context)
+    except Exception as error:
+        _log_failure(provider_name, "context", error)
+        raise
+    _log_success(provider_name, "context", intent=classification.intent.value)
     try:
         answer = active_provider.explain(question, classification.intent, context)
-    except Exception:
+    except Exception as error:
         # Se só a explicação falhar, reaproveitamos o mesmo contexto no texto determinístico.
-        logger.warning("Falha na explicação do provider; ativando fallback local.")
+        _log_failure(provider_name, "generation", error)
         answer = MockAIProvider().explain(question, classification.intent, context)
         provider_name = "fallback"
+    _log_success(provider_name, "generation", intent=classification.intent.value)
 
     # As evidências são anexadas pelo backend e nunca escolhidas pelo modelo.
     return {
@@ -250,16 +375,27 @@ def query_assistant(question: str, provider: AIProvider | None = None) -> dict:
 
 
 def executive_summary(provider: AIProvider | None = None) -> dict:
-    active_provider = provider or get_ai_provider()
+    try:
+        active_provider = provider or get_ai_provider()
+    except Exception as error:
+        _log_failure(settings.AI_PROVIDER, "configuration", error)
+        raise
     provider_name = active_provider.name
-    context, evidence = _executive_context()
+    try:
+        context, evidence = _executive_context()
+        _validate_context(Intent.EXECUTIVE_SUMMARY, context)
+    except Exception as error:
+        _log_failure(provider_name, "context", error)
+        raise
+    _log_success(provider_name, "context", intent=Intent.EXECUTIVE_SUMMARY.value)
     question = "Resuma a operação."
     try:
         answer = active_provider.explain(question, Intent.EXECUTIVE_SUMMARY, context)
-    except Exception:
-        logger.warning("Falha no resumo do provider; ativando fallback local.")
+    except Exception as error:
+        _log_failure(provider_name, "generation", error)
         answer = MockAIProvider().explain(question, Intent.EXECUTIVE_SUMMARY, context)
         provider_name = "fallback"
+    _log_success(provider_name, "generation", intent=Intent.EXECUTIVE_SUMMARY.value)
     return {
         "intent": Intent.EXECUTIVE_SUMMARY.value,
         "confidence": 1.0,

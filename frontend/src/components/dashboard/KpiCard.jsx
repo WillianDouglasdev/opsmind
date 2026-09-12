@@ -1,49 +1,14 @@
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  CircleDollarSign,
-  ClockAlert,
-  Minus,
-  PackageCheck,
-  TicketCheck,
-} from "lucide-react";
-
-const iconMap = {
-  revenue: CircleDollarSign,
-  orders: PackageCheck,
-  delays: ClockAlert,
-  tickets: TicketCheck,
-};
-
-function KpiCard({ metric }) {
-  const Icon = iconMap[metric.id] ?? PackageCheck;
-  const isDown = metric.direction === "down";
-  const TrendIcon = metric.direction === "neutral"
-    ? Minus
-    : isDown
-      ? ArrowDownRight
-      : ArrowUpRight;
-
+// Mantemos o componente de indicador, agora sem repetir caixas e ícones.
+// O contexto acompanha cada número para distinguir período, taxa e estado da base.
+export default function KpiCard({ metric }) {
   return (
-    <article className="panel kpi-card">
-      <div className="kpi-heading">
-        <span className={`kpi-icon ${metric.id}`}>
-          <Icon size={19} />
-        </span>
-        <span className="kpi-label">{metric.label}</span>
-      </div>
-      <p className="kpi-value">{metric.value}</p>
-      <div className="metric-change-row">
-        {metric.change && (
-          <span className={`metric-change ${metric.tone ?? metric.direction}`}>
-            <TrendIcon size={14} />
-            {metric.change}
-          </span>
-        )}
-        <span>{metric.context}</span>
-      </div>
+    <article className={"indicator " + metric.id}>
+      <h2>{metric.label}</h2>
+      <p className="indicator-value">{metric.value}</p>
+      <p className="indicator-context">{metric.context}</p>
+      {metric.path && <Link className="indicator-link" to={metric.path}>Ver detalhes <ArrowRight size={13} aria-hidden="true" /></Link>}
     </article>
   );
 }
-
-export default KpiCard;
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";

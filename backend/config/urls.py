@@ -7,5 +7,7 @@ urlpatterns = [
     path("api/alerts/", include("operations.alert_urls")),
     path("api/actions/", include("operations.action_urls")),
     path("api/assistant/", include("operations.assistant_urls")),
+    path("api/data/pipelines/", include("operations.pipeline_urls")),
+    path("api/operation/", include("operations.operation_urls")),
     path("api/", include("core.urls")),
 ]

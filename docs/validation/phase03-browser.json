@@ -1,0 +1,24 @@
+{
+  "dataset": {
+    "received": 16,
+    "valid": 12,
+    "rejected": 4,
+    "loaded": 12,
+    "quality_percentage": 75.0
+  },
+  "issues_visible": 4,
+  "history_runs_visible": 2,
+  "layouts": [
+    { "route": "/", "width": 320, "overflow": false },
+    { "route": "/pipelines", "width": 320, "overflow": false },
+    { "route": "/", "width": 390, "overflow": false },
+    { "route": "/pipelines", "width": 390, "overflow": false },
+    { "route": "/", "width": 820, "overflow": false },
+    { "route": "/pipelines", "width": 820, "overflow": false },
+    { "route": "/", "width": 1280, "overflow": false },
+    { "route": "/pipelines", "width": 1280, "overflow": false },
+    { "route": "/", "width": 1440, "overflow": false },
+    { "route": "/pipelines", "width": 1440, "overflow": false }
+  ],
+  "javascript_errors": []
+}

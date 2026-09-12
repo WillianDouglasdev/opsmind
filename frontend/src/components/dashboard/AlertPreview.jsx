@@ -1,84 +1,28 @@
-import { useEffect, useState } from "react";
-import { ArrowRight, BellRing } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getAlerts } from "../../services/api.js";
-import { severityLabels } from "../../utils/alerts.js";
+import { formatAlertMetric, severityLabels } from "../../utils/alerts.js";
+import SectionState from "../common/SectionState.jsx";
 
-function AlertPreview() {
-  const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    getAlerts({ signal: controller.signal })
-      .then((data) => {
-        // A API já ordena por severidade; o dashboard mostra apenas os três primeiros.
-        setAlerts(data.slice(0, 3));
-        setError(false);
-      })
-      .catch((requestError) => {
-        if (requestError.name !== "AbortError") setError(true);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, []);
-
+export default function AlertPreview({ section, onRetry }) {
+  const alerts = section.data ?? [];
+  const leading = alerts[0];
+  // A cor tem função: âmbar para atenção, vermelho somente se houver alerta crítico.
+  // Ausência de resposta é erro; ausência de alertas após sucesso é um estado distinto.
+  const tone = section.status !== "success" ? "unavailable"
+    : alerts.length === 0 ? "clear"
+      : alerts.some((alert) => alert.severity === "critical") ? "critical" : "attention";
   return (
-    <article className="panel alerts-card">
-      <div className="panel-heading alerts-heading">
-        <div>
-          <h2>Alertas Operacionais</h2>
-          <p>Sinais que exigem atenção</p>
-        </div>
-        <Link to="/alerts" className="text-link">
-          Ver todos <ArrowRight size={14} />
-        </Link>
-      </div>
-
-      <div className="alert-list">
-        {alerts.map((alert) => (
-          <Link className="alert-item" to={`/alerts/${alert.key}`} key={alert.key}>
-            <span className={`severity-marker ${alert.severity}`} />
-            <div className="alert-copy">
-              <span className={`severity-badge ${alert.severity}`}>
-                {severityLabels[alert.severity]}
-              </span>
-              <h3>{alert.title}</h3>
-              <p>{alert.summary}</p>
-            </div>
-            <ArrowRight className="alert-arrow" size={17} aria-hidden="true" />
-          </Link>
-        ))}
-
-        {(loading || error || (!loading && alerts.length === 0)) && (
-          <div className="alert-empty-state">
-            <BellRing size={20} />
-            <div>
-              <h3>
-                {loading
-                  ? "Analisando sinais operacionais"
-                  : error
-                    ? "Alertas indisponíveis"
-                    : "Nenhum alerta ativo"}
-              </h3>
-              <p>
-                {error
-                  ? "Não foi possível consultar os alertas agora."
-                  : loading
-                    ? "Aplicando regras determinísticas aos dados da operação."
-                    : "As regras atuais não identificaram sinais que exijam investigação."}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </article>
+    <section className={"attention-panel " + tone} aria-labelledby="attention-title">
+      <div className="attention-heading"><h2 id="attention-title">Precisa de atenção</h2><ArrowUpRight size={20} aria-hidden="true" /></div>
+      {section.status !== "success" ? <SectionState status={section.status} onRetry={onRetry} />
+        : alerts.length === 0
+          ? <><strong className="attention-number">0</strong><p className="attention-copy">Nenhum alerta ativo.</p><p>As regras atuais não apontam situações para investigar.</p></>
+          : <>
+            <div className="attention-total"><strong className="attention-number">{alerts.length}</strong><p className="attention-copy">{alerts.length === 1 ? "situação merece" : "situações merecem"}<br />um olhar mais próximo.</p></div>
+            <Link className="attention-leading" to={"/alerts/" + leading.key}><span>Prioridade {severityLabels[leading.severity].toLowerCase()}</span>{leading.title}</Link>
+            {leading.metrics?.[0] && <p className="attention-evidence">{formatAlertMetric(leading.metrics[0])} {leading.metrics[0].label.toLowerCase()}</p>}
+          </>}
+      <Link className="attention-link" to="/alerts">Ver prioridades <ArrowRight size={17} aria-hidden="true" /></Link>
+    </section>
   );
 }
-
-export default AlertPreview;

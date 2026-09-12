@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test src/utils/dashboard.test.js src/utils/pipelines.test.js src/utils/operation.test.js src/utils/theme.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

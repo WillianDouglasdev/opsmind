@@ -1,0 +1,39 @@
+{
+  "executed_at": "2026-09-12",
+  "browser": "Google Chrome headless local",
+  "themes": {
+    "system_preference_on_first_visit": "dark",
+    "saved_preference_precedence": true,
+    "persisted_after_reload": true,
+    "flash_prevention_attribute": true
+  },
+  "identity": "OpsMind2",
+  "quality_donut": {
+    "valid": 12,
+    "rejected": 4,
+    "quality_percentage": 75.0,
+    "text_legend": true,
+    "tooltip_interaction": true
+  },
+  "contrast_ratios": {
+    "minimum_measured": 4.84,
+    "maximum_measured": 16.13,
+    "checks": 10,
+    "minimum_required": 4.5
+  },
+  "responsive": {
+    "core_routes": ["/", "/pipelines", "/operation"],
+    "core_widths": [320, 375, 768, 1024, 1440],
+    "core_combinations": 30,
+    "secondary_routes": ["/alerts", "/actions", "/assistant", "/operation/delays", "/operation/branches/2"],
+    "secondary_widths": [375, 1440],
+    "secondary_combinations": 20,
+    "horizontal_overflow": false
+  },
+  "javascript_errors": [],
+  "environment_resource_notes": {
+    "remote_font_requests_blocked": true,
+    "system_font_fallback_verified": true,
+    "repeated_external_resource_errors": 64
+  }
+}

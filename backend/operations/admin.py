@@ -7,6 +7,8 @@ from operations.models import (
     Inventory,
     Order,
     OrderItem,
+    PipelineIssue,
+    PipelineRun,
     Product,
     Ticket,
 )
@@ -107,6 +109,41 @@ class ActionItemAdmin(admin.ModelAdmin):
     list_filter = ("priority", "status", "source_alert_type")
     search_fields = ("title",)
     date_hierarchy = "created_at"
+
+
+class PipelineIssueInline(admin.TabularInline):
+    model = PipelineIssue
+    extra = 0
+    readonly_fields = ("record_identifier", "code", "message", "detected_at")
+
+
+@admin.register(PipelineRun)
+class PipelineRunAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "pipeline_key", "status", "records_received", "records_rejected",
+        "records_loaded", "started_at", "finished_at",
+    )
+    list_filter = ("pipeline_key", "status")
+    readonly_fields = (
+        "pipeline_key", "source_name", "status", "steps", "started_at", "finished_at",
+        "published_at", "duration_ms", "records_received", "records_valid",
+        "records_rejected", "records_loaded", "error_message",
+    )
+    inlines = (PipelineIssueInline,)
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+
+@admin.register(PipelineIssue)
+class PipelineIssueAdmin(admin.ModelAdmin):
+    list_display = ("run", "record_identifier", "code", "detected_at")
+    list_filter = ("code", "run__pipeline_key")
+    search_fields = ("record_identifier", "message")
+    readonly_fields = ("run", "record_identifier", "code", "message", "detected_at")
+
+    def has_add_permission(self, request) -> bool:
+        return False
 
 
 admin.site.site_header = "OpsMind — Administração"

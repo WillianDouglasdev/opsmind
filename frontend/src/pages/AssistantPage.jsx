@@ -88,7 +88,7 @@ function AssistantPage() {
             <span className="assistant-eyebrow">Inteligência operacional assistida</span>
             <h2>Consulte a operação com linguagem natural</h2>
             <p>
-              O OpsMind AI explica analytics e investigações já calculados pelo backend,
+              O OpsMind2 AI explica analytics e investigações já calculados pelo backend,
               sempre acompanhado das evidências utilizadas.
             </p>
           </div>
@@ -158,7 +158,7 @@ function AssistantPage() {
             <div className="assistant-answer-heading">
               <span className="assistant-symbol small"><Sparkles size={18} /></span>
               <div>
-                <span>OpsMind AI</span>
+                <span>OpsMind2 AI</span>
                 <small>{providerLabels[result.provider]}</small>
               </div>
               <span className="intent-badge">{intentLabels[result.intent]}</span>

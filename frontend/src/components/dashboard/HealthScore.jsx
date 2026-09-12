@@ -1,52 +1,28 @@
-import { Info, ListChecks } from "lucide-react";
+import { formatNumber } from "../../utils/formatters.js";
 
-function HealthScore({ health, loading }) {
-  const score = health?.score ?? 0;
-  // O anel usa graus no gradiente, por isso cada ponto do score representa 3,6 graus.
-  const scoreAngle = `${score * 3.6}deg`;
-  const status = loading ? "Calculando" : health?.status ?? "Indisponível";
-  const description = loading
-    ? "Consolidando os indicadores operacionais."
-    : health?.description ?? "Não foi possível calcular a saúde operacional.";
-
+export default function HealthScore({ health }) {
+  // A API já classifica a saúde. A interface usa o status para cor e exibe os
+  // impactos calculados, sem inventar evolução histórica ou variação do score.
+  const tone = {
+    "Saudável": "healthy", "Atenção": "attention",
+    "Risco moderado": "attention", "Risco alto": "critical",
+  }[health.status] ?? "neutral";
   return (
-    <article className="panel health-card">
-      <div className="panel-heading">
-        <div>
-          <p className="panel-eyebrow">Status Atual</p>
-          <h2>Saúde Operacional</h2>
-        </div>
-        <span className="info-icon" title="Pontuação operacional consolidada">
-          <Info size={17} />
-        </span>
+    <section className={"health-overview " + tone} aria-labelledby="health-title">
+      <div className="section-heading"><h2 id="health-title">Saúde operacional</h2><span className="health-status"><i aria-hidden="true" />{health.status}</span></div>
+      <div className="health-score-line">
+        <span className="health-value">{formatNumber(health.score)}</span>
+        <div className="health-context"><span>de 100 pontos</span><p>{health.description}</p></div>
       </div>
-
-      <div className="health-content">
-        <div
-          className={`health-ring ${health ? "" : "is-loading"}`}
-          style={{ "--score-angle": scoreAngle }}
-          role="img"
-          aria-label={health ? `Saúde operacional: ${score} de 100` : status}
-        >
-          <span>
-            <strong>{health ? score : "—"}</strong>
-            <small>/ 100</small>
-          </span>
-        </div>
-
-        <div className="health-summary">
-          <span className="risk-badge">{status}</span>
-          <p>{description}</p>
-          {health && (
-            <span className="health-trend">
-              <ListChecks size={14} />
-              {health.components.length} componentes avaliados
-            </span>
-          )}
-        </div>
+      <div className="health-track" role="meter" aria-label="Saúde operacional" aria-valuemin={0} aria-valuemax={100} aria-valuenow={health.score} aria-valuetext={health.score + " de 100 — " + health.status}>
+        <span style={{ width: Math.max(0, Math.min(100, health.score)) + "%" }} />
       </div>
-    </article>
+      <div className="health-track-labels"><span>Mais risco</span><span>Mais saudável</span></div>
+      <details className="health-details">
+        <summary>Como este resultado é formado <span>{health.components.length} componentes</span></summary>
+        <dl>{health.components.map((component) => <div key={component.name}><dt>{component.name}</dt><dd>{component.impact} pontos</dd></div>)}</dl>
+        <p>Penalidades calculadas pelo backend sobre a base disponível. Sem histórico de variação do score.</p>
+      </details>
+    </section>
   );
 }
-
-export default HealthScore;
