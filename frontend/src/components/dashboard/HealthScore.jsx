@@ -7,17 +7,16 @@ export default function HealthScore({ health }) {
     "Saudável": "healthy", "Atenção": "attention",
     "Risco moderado": "attention", "Risco alto": "critical",
   }[health.status] ?? "neutral";
+  const score = Math.max(0, Math.min(100, Number(health.score) || 0));
   return (
     <section className={"health-overview " + tone} aria-labelledby="health-title">
       <div className="section-heading"><h2 id="health-title">Saúde operacional</h2><span className="health-status"><i aria-hidden="true" />{health.status}</span></div>
-      <div className="health-score-line">
-        <span className="health-value">{formatNumber(health.score)}</span>
-        <div className="health-context"><span>de 100 pontos</span><p>{health.description}</p></div>
+      <div className="health-score-layout">
+        <div className="health-gauge" role="meter" aria-label="Saúde operacional" aria-valuemin={0} aria-valuemax={100} aria-valuenow={score} aria-valuetext={score + "% — " + health.status} style={{ "--health-score": score + "%" }}>
+          <div className="health-gauge-center"><strong>{formatNumber(score)}<span>%</span></strong><small>índice de saúde</small></div>
+        </div>
+        <div className="health-context"><span>Leitura geral da operação</span><p>{health.description}</p></div>
       </div>
-      <div className="health-track" role="meter" aria-label="Saúde operacional" aria-valuemin={0} aria-valuemax={100} aria-valuenow={health.score} aria-valuetext={health.score + " de 100 — " + health.status}>
-        <span style={{ width: Math.max(0, Math.min(100, health.score)) + "%" }} />
-      </div>
-      <div className="health-track-labels"><span>Mais risco</span><span>Mais saudável</span></div>
       <details className="health-details">
         <summary>Como este resultado é formado <span>{health.components.length} componentes</span></summary>
         <dl>{health.components.map((component) => <div key={component.name}><dt>{component.name}</dt><dd>{component.impact} pontos</dd></div>)}</dl>

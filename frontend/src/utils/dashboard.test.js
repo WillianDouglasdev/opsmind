@@ -14,10 +14,29 @@ test("indicadores aceitam Decimal serializado e mantêm ausência de comparaçã
   assert.equal(indicators.length, 4);
   assert.match(indicators[0].value, /1\.201/);
   assert.equal(indicators[0].context, "Sem base de comparação");
+  assert.deepEqual(indicators[0].trend, { tone: "neutral", label: "Sem comparação" });
+  assert.deepEqual(indicators[1].trend, { tone: "positive", label: "Melhor" });
   assert.match(indicators[2].context, /20,0% dos pedidos/);
   assert.match(indicators[2].context, /\+50,0%/);
+  assert.deepEqual(indicators[2].trend, { tone: "negative", label: "Pior" });
   assert.equal(indicators[3].context, "Abertos ou em andamento · toda a base");
+  assert.deepEqual(indicators[3].trend, { tone: "neutral", label: "Retrato atual" });
   assert.deepEqual(summary, before);
+});
+
+test("comparativos respeitam se subir ou cair é favorável para cada indicador", () => {
+  const indicators = buildIndicators({
+    revenue: { value: 100, change_percentage: -5 },
+    orders: { value: 10, change_percentage: 0 },
+    delayed_orders: { value: 1, rate: 10, change_percentage: -25 },
+    open_tickets: { value: 0 },
+  });
+  assert.deepEqual(indicators.map((indicator) => indicator.trend), [
+    { tone: "negative", label: "Pior" },
+    { tone: "neutral", label: "Estável" },
+    { tone: "positive", label: "Melhor" },
+    { tone: "neutral", label: "Retrato atual" },
+  ]);
 });
 
 test("resumo ausente não fabrica indicadores zerados", () => {

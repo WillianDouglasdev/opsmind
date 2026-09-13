@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { getHealth, getPipelines } from "../../services/api.js";
 import Sidebar from "./Sidebar.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 import Topbar from "./Topbar.jsx";
 
 const pageDetails = {
@@ -103,6 +104,7 @@ export default function AppLayout() {
           {!isHome && <header className="page-heading"><p className="eyebrow">Central de inteligência operacional</p><h1>{currentPage.title}</h1><p>{currentPage.subtitle}</p></header>}
           <Outlet />
         </main>
+        <SiteFooter />
       </div>
     </div>
   );

@@ -85,7 +85,7 @@
 .investigation-opening-summary dd {
   margin: var(--space-1) 0 0;
   color: var(--text-primary);
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-weight: 700;
 }
 
@@ -155,6 +155,15 @@
   font-size: 1.35rem;
 }
 
+.investigation-opening-summary > div:nth-child(2) dd { color: var(--danger); }
+.investigation-opening-summary > div:nth-child(3) dd { color: var(--info); }
+.investigation-opening.high { background: linear-gradient(135deg, var(--surface), var(--warning-soft)); }
+.investigation-opening.critical { background: linear-gradient(135deg, var(--surface), var(--danger-soft)); }
+.investigation-impact > div:first-child strong { color: var(--danger); }
+.investigation-impact > div:nth-child(2) strong { color: var(--warning); }
+.investigation-impact > div:nth-child(3) strong { color: var(--info); }
+.evidence-ledger-row.primary .evidence-ledger-values > div:first-child dd { color: var(--danger); }
+
 .investigation-impact {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -181,7 +190,7 @@
 }
 
 .investigation-impact strong {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 1.35rem;
 }
 
@@ -361,7 +370,7 @@
 
 .investigation-next-steps li > span {
   color: var(--neutral-500);
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-weight: 700;
 }
 

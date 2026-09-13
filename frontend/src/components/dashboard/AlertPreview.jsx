@@ -2,6 +2,8 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatAlertMetric, severityLabels } from "../../utils/alerts.js";
 import SectionState from "../common/SectionState.jsx";
+import DistributionChart from "../charts/DistributionChart.jsx";
+import { buildAlertSegments } from "../../utils/charts.js";
 
 export default function AlertPreview({ section, onRetry }) {
   const alerts = section.data ?? [];
@@ -18,7 +20,7 @@ export default function AlertPreview({ section, onRetry }) {
         : alerts.length === 0
           ? <><strong className="attention-number">0</strong><p className="attention-copy">Nenhum alerta ativo.</p><p>As regras atuais não apontam situações para investigar.</p></>
           : <>
-            <div className="attention-total"><strong className="attention-number">{alerts.length}</strong><p className="attention-copy">{alerts.length === 1 ? "situação merece" : "situações merecem"}<br />um olhar mais próximo.</p></div>
+            <DistributionChart segments={buildAlertSegments(alerts)} label="Alertas por severidade" totalLabel="alertas ativos" />
             <Link className="attention-leading" to={"/alerts/" + leading.key}><span>Prioridade {severityLabels[leading.severity].toLowerCase()}</span>{leading.title}</Link>
             {leading.metrics?.[0] && <p className="attention-evidence">{formatAlertMetric(leading.metrics[0])} {leading.metrics[0].label.toLowerCase()}</p>}
           </>}
