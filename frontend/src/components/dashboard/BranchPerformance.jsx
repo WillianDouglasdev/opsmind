@@ -3,9 +3,12 @@ import { Link } from "react-router-dom";
 import { branchRows, operationPath } from "../../utils/operation.js";
 import { formatNumber, formatPercentage } from "../../utils/formatters.js";
 import SectionState from "../common/SectionState.jsx";
+import DistributionChart from "../charts/DistributionChart.jsx";
+import { buildBranchDelaySegments } from "../../utils/charts.js";
 
 export default function BranchPerformance({ section, onRetry }) {
   const rows = branchRows(section.data).slice(0, 3);
+  const segments = buildBranchDelaySegments(section.data?.branches);
   return (
     <section className="branch-performance" aria-labelledby="branches-title">
       <div className="section-heading"><h2 id="branches-title">Filiais</h2><Link className="text-button" to="/operation?days=30">Ver operação</Link></div>
@@ -22,6 +25,11 @@ export default function BranchPerformance({ section, onRetry }) {
               <p>{formatNumber(row.orders)} pedidos <span>Média das filiais: {formatPercentage(section.data.branch_average.delay_rate, false)}</span></p>
             </div>
           ))}</div>}
+      {section.status === "success" && segments.length > 0 && <div className="branch-distribution">
+        <h3>Onde estão os pedidos atrasados?</h3>
+        <p>Participação de cada filial no total de atrasos · 30 dias.</p>
+        <DistributionChart variant="pie" segments={segments} label="Pedidos atrasados por filial" />
+      </div>}
       <p className="scope-note">Abra uma filial para comparar sua operação e consultar os pedidos.</p>
     </section>
   );

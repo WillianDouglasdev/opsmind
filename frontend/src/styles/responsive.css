@@ -51,7 +51,7 @@
   .home-opening .refresh-button { margin-top: 28px; }
   .home-primary { gap: 24px; }
   .health-context { max-width: 300px; }
-  .health-overview { padding-bottom: 0; }
+  .health-overview { padding: 20px; }
   .attention-panel { min-height: 230px; }
   .attention-total { margin: 8px 0 14px; }
   .attention-leading { max-width: none; }
@@ -132,7 +132,8 @@
   .refresh-button svg { width: 14px; }
   .home-period { padding: 20px 0 26px; flex-direction: column; align-items: flex-start; font-size: 0.625rem; }
   .health-status { font-size: 0.6875rem; }
-  .health-score-line { margin: 24px 0; gap: 24px; }
+  .health-score-line { margin: 24px 0; gap: 16px; flex-wrap: wrap; }
+  .health-value { font-size: 4.75rem; }
   .health-context > p { font-size: 0.8125rem; line-height: 1.6; }
   .health-details summary > span { display: none; }
   .health-details dt, .health-details dd { font-size: 0.6875rem; }

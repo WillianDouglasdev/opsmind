@@ -8,6 +8,7 @@ import react from "@vitejs/plugin-react";
 import { createServer } from "vite";
 
 import { operationPath, operationSearchParams, readOperationFilters } from "./operation.js";
+import { buildBranchDelaySegments } from "./charts.js";
 
 let server;
 let OperationOverview;
@@ -15,6 +16,9 @@ let OrderFilters;
 let OrderTable;
 let BranchComparison;
 let DataQualityDonut;
+let DistributionChart;
+let AlertPreview;
+let BranchPerformance;
 
 const filters = { days: 30, branch: "", status: "", delivery: "all", page: 1 };
 const overview = {
@@ -39,9 +43,46 @@ before(async () => {
   ({ default: OrderTable } = await server.ssrLoadModule("/src/components/operation/OrderTable.jsx"));
   ({ default: BranchComparison } = await server.ssrLoadModule("/src/components/operation/BranchComparison.jsx"));
   ({ default: DataQualityDonut } = await server.ssrLoadModule("/src/components/charts/DataQualityDonut.jsx"));
+  ({ default: DistributionChart } = await server.ssrLoadModule("/src/components/charts/DistributionChart.jsx"));
+  ({ default: AlertPreview } = await server.ssrLoadModule("/src/components/dashboard/AlertPreview.jsx"));
+  ({ default: BranchPerformance } = await server.ssrLoadModule("/src/components/dashboard/BranchPerformance.jsx"));
 });
 
 after(async () => server?.close());
+
+test("pizza preserva legenda textual, quantidades, percentuais e links", () => {
+  const html = render(DistributionChart, { variant: "pie", segments: buildBranchDelaySegments(overview.branches), label: "Pedidos atrasados por filial" });
+  assert.match(html, /Pedidos atrasados por filial/);
+  assert.match(html, /Contagem/);
+  assert.match(html, /<strong>4<\/strong>/);
+  assert.match(html, /100,0%/);
+  assert.match(html, /href="\/operation\/branches\/7\?days=30&amp;delivery=late"/);
+  assert.equal(render(DistributionChart, { segments: [], label: "Sem dados" }), "");
+});
+
+test("painel de alertas mostra severidade e diferencia vazio de erro", () => {
+  const html = render(AlertPreview, { section: { status: "success", data: [
+    { key: "critical", title: "Atrasos", severity: "critical" },
+    { key: "high", title: "Estoque", severity: "high" },
+  ] } });
+  assert.match(html, /Alertas por severidade/);
+  assert.match(html, /Críticos/);
+  assert.match(html, /50,0%/);
+  assert.match(html, /href="\/alerts\/critical"/);
+  const empty = render(AlertPreview, { section: { status: "success", data: [] } });
+  assert.match(empty, /Nenhum alerta ativo/);
+  assert.doesNotMatch(empty, /distribution-chart/);
+  assert.doesNotMatch(render(AlertPreview, { section: { status: "error" } }), /Nenhum alerta ativo|distribution-chart/);
+});
+
+test("dashboard mantém taxa da filial separada da participação na pizza", () => {
+  const html = render(BranchPerformance, { section: { status: "success", data: overview } });
+  assert.match(html, /40,0%/);
+  assert.match(html, /100,0%/);
+  assert.match(html, /Pedidos atrasados por filial/);
+  assert.doesNotMatch(render(BranchPerformance, { section: { status: "loading" } }), /distribution-chart/);
+  assert.doesNotMatch(render(BranchPerformance, { section: { status: "success", data: { ...overview, branches: [] } } }), /distribution-chart/);
+});
 
 test("filtros são lidos e serializados de forma previsível", () => {
   assert.deepEqual(readOperationFilters(new URLSearchParams("days=90&branch=2&status=delayed&delivery=late&page=3")), {
