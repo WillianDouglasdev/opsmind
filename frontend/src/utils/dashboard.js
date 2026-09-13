@@ -2,13 +2,24 @@ import { formatCurrency, formatNumber, formatPercentage } from "./formatters.js"
 
 export function buildIndicators(summary) {
   if (!summary) return [];
-  const change = (value) => value === null ? "Sem base de comparação" : `${formatPercentage(value)} vs. período anterior`;
+  const comparison = (value, improvesWhen = "up") => {
+    if (value === null) return { context: "Sem base de comparação", trend: { tone: "neutral", label: "Sem comparação" } };
+    if (value === 0) return { context: `${formatPercentage(value)} vs. período anterior`, trend: { tone: "neutral", label: "Estável" } };
+    const improved = improvesWhen === "up" ? value > 0 : value < 0;
+    return {
+      context: `${formatPercentage(value)} vs. período anterior`,
+      trend: { tone: improved ? "positive" : "negative", label: improved ? "Melhor" : "Pior" },
+    };
+  };
+  const revenue = comparison(summary.revenue.change_percentage);
+  const orders = comparison(summary.orders.change_percentage);
+  const delays = comparison(summary.delayed_orders.change_percentage, "down");
   // Adaptamos unidades e contexto. Nenhuma soma, taxa ou classificação é recalculada.
   return [
-    { id: "revenue", label: "Faturamento", value: formatCurrency(summary.revenue.value), context: change(summary.revenue.change_percentage) },
-    { id: "orders", label: "Pedidos", value: formatNumber(summary.orders.value), context: change(summary.orders.change_percentage) },
-    { id: "delays", label: "Pedidos atrasados", value: formatNumber(summary.delayed_orders.value), context: `${formatPercentage(summary.delayed_orders.rate, false)} dos pedidos · ${change(summary.delayed_orders.change_percentage)}`, path: "/operation/delays?days=30", investigationPath: "/investigations/delivery-delays?days=30" },
-    { id: "tickets", label: "Chamados ativos", value: formatNumber(summary.open_tickets.value), context: "Abertos ou em andamento · toda a base" },
+    { id: "revenue", label: "Faturamento", value: formatCurrency(summary.revenue.value), context: revenue.context, trend: revenue.trend },
+    { id: "orders", label: "Pedidos", value: formatNumber(summary.orders.value), context: orders.context, trend: orders.trend },
+    { id: "delays", label: "Pedidos atrasados", value: formatNumber(summary.delayed_orders.value), context: `${formatPercentage(summary.delayed_orders.rate, false)} dos pedidos · ${delays.context}`, trend: delays.trend, path: "/operation/delays?days=30", investigationPath: "/investigations/delivery-delays?days=30" },
+    { id: "tickets", label: "Chamados ativos", value: formatNumber(summary.open_tickets.value), context: "Abertos ou em andamento · toda a base", trend: { tone: "neutral", label: "Retrato atual" } },
   ];
 }
 

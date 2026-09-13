@@ -22,7 +22,7 @@ export function applyTheme(theme, { root, meta } = {}) {
     root.dataset.theme = safeTheme;
     root.style.colorScheme = safeTheme;
   }
-  if (meta) meta.setAttribute("content", safeTheme === "dark" ? "#0c1628" : "#fafaf7");
+  if (meta) meta.setAttribute("content", safeTheme === "dark" ? "#090b0d" : "#fafaf7");
   return safeTheme;
 }
 

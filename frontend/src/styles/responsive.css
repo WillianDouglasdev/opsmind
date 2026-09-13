@@ -1,8 +1,10 @@
 @media (max-width: 1199.98px) {
   .topbar { padding-right: 32px; padding-left: 32px; }
   .page-content { padding-right: 32px; padding-left: 32px; }
+  .site-footer { width: calc(100% - 64px); }
   .home-primary, .home-analysis, .home-performance { gap: 28px; grid-template-columns: minmax(0, 1.4fr) minmax(270px, 1fr); }
-  .health-score-line { gap: 20px; }
+  .health-score-layout { gap: 20px; }
+  .health-gauge { width: 142px; height: 142px; flex-basis: 142px; }
   .health-context { max-width: 220px; }
   .indicator { padding: 10px 18px 0; }
   .indicator::before { left: 18px; }
@@ -124,6 +126,7 @@
   .theme-toggle { width: 34px; padding: 0; justify-content: center; }
   .theme-toggle span { display: none; }
   .page-content { padding: 28px 20px; }
+  .site-footer { width: calc(100% - 40px); padding-bottom: 20px; align-items: flex-start; flex-direction: column; gap: 10px; }
   .home-opening { display: block; position: relative; }
   .home-opening .eyebrow { max-width: calc(100% - 35px); font-size: 0.5625rem; line-height: 1.8; }
   .home-opening h1 { max-width: 300px; margin-top: 14px; line-height: 1.2; }
@@ -132,8 +135,9 @@
   .refresh-button svg { width: 14px; }
   .home-period { padding: 20px 0 26px; flex-direction: column; align-items: flex-start; font-size: 0.625rem; }
   .health-status { font-size: 0.6875rem; }
-  .health-score-line { margin: 24px 0; gap: 16px; flex-wrap: wrap; }
-  .health-value { font-size: 4.75rem; }
+  .health-score-layout { margin: 24px 0; gap: 16px; }
+  .health-gauge { width: 132px; height: 132px; flex-basis: 132px; }
+  .health-gauge-center strong { font-size: 2.25rem; }
   .health-context > p { font-size: 0.8125rem; line-height: 1.6; }
   .health-details summary > span { display: none; }
   .health-details dt, .health-details dd { font-size: 0.6875rem; }
@@ -216,6 +220,11 @@
   .investigation-timeline li > div, .investigation-timeline li > a { grid-column: 2; }
   .investigation-next-steps li { grid-template-columns: 30px 20px minmax(0, 1fr); }
   .investigation-next-steps li > a { grid-column: 3; }
+}
+
+@media (max-width: 359.98px) {
+  .health-score-layout { align-items: flex-start; flex-direction: column; }
+  .health-context { max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }

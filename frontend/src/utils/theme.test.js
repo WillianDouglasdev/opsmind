@@ -31,7 +31,7 @@ test("aplicação e persistência atualizam documento sem depender do React", ()
   assert.equal(applyTheme("dark", { root, meta }), "dark");
   assert.equal(root.dataset.theme, "dark");
   assert.equal(root.style.colorScheme, "dark");
-  assert.equal(meta.content, "#0c1628");
+  assert.equal(meta.content, "#090b0d");
   assert.equal(persistTheme("dark", storage), true);
   assert.deepEqual(writes, [["opsmind-theme", "dark"]]);
 });

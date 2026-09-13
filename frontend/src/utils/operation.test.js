@@ -19,6 +19,9 @@ let DataQualityDonut;
 let DistributionChart;
 let AlertPreview;
 let BranchPerformance;
+let HealthScore;
+let SiteFooter;
+let KpiCard;
 
 const filters = { days: 30, branch: "", status: "", delivery: "all", page: 1 };
 const overview = {
@@ -36,6 +39,7 @@ function render(Component, props) {
 before(async () => {
   server = await createServer({
     root: cwd(), configFile: false, appType: "custom",
+    optimizeDeps: { noDiscovery: true },
     server: { middlewareMode: true }, plugins: [react()],
   });
   ({ OperationOverview } = await server.ssrLoadModule("/src/pages/OperationPage.jsx"));
@@ -46,9 +50,36 @@ before(async () => {
   ({ default: DistributionChart } = await server.ssrLoadModule("/src/components/charts/DistributionChart.jsx"));
   ({ default: AlertPreview } = await server.ssrLoadModule("/src/components/dashboard/AlertPreview.jsx"));
   ({ default: BranchPerformance } = await server.ssrLoadModule("/src/components/dashboard/BranchPerformance.jsx"));
+  ({ default: HealthScore } = await server.ssrLoadModule("/src/components/dashboard/HealthScore.jsx"));
+  ({ default: SiteFooter } = await server.ssrLoadModule("/src/components/layout/SiteFooter.jsx"));
+  ({ default: KpiCard } = await server.ssrLoadModule("/src/components/dashboard/KpiCard.jsx"));
 });
 
 after(async () => server?.close());
+
+test("saúde operacional usa indicador circular com percentual acessível", () => {
+  const html = render(HealthScore, { health: { score: 69, status: "Risco moderado", description: "Atrasos exigem atenção.", components: [] } });
+  assert.match(html, /class="health-gauge"/);
+  assert.match(html, /role="meter"/);
+  assert.match(html, /aria-valuenow="69"/);
+  assert.match(html, /<strong>69<span>%<\/span><\/strong>/);
+  assert.doesNotMatch(html, /health-track/);
+});
+
+test("rodapé identifica o responsável e aponta para seu LinkedIn", () => {
+  const html = render(SiteFooter);
+  assert.match(html, /Responsável pelo projeto/);
+  assert.match(html, /Willian Douglas/);
+  assert.match(html, /https:\/\/www\.linkedin\.com\/in\/willian-douglas-contato/);
+  assert.match(html, /target="_blank"/);
+});
+
+test("indicador apresenta tendência por cor e também por texto", () => {
+  const html = render(KpiCard, { metric: { id: "delays", label: "Pedidos atrasados", value: "60", context: "+24,2% vs. período anterior", trend: { tone: "negative", label: "Pior" } } });
+  assert.match(html, /indicator-trend negative/);
+  assert.match(html, />Pior<\/small>/);
+  assert.match(html, /\+24,2% vs\. período anterior/);
+});
 
 test("pizza preserva legenda textual, quantidades, percentuais e links", () => {
   const html = render(DistributionChart, { variant: "pie", segments: buildBranchDelaySegments(overview.branches), label: "Pedidos atrasados por filial" });
